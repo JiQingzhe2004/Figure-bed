@@ -47,8 +47,26 @@ const Header: React.FC = () => {
               <Link to="/upload" className="text-gray-700 hover:text-blue-600 dark:text-gray-200 dark:hover:text-blue-400">上传图片</Link>
               <Link to="/user/images" className="text-gray-700 hover:text-blue-600 dark:text-gray-200 dark:hover:text-blue-400">我的图片</Link>
               
+              {/* 用户下拉菜单 */}
               <div className="relative group">
                 <button className="flex items-center text-gray-700 hover:text-blue-600 dark:text-gray-200 dark:hover:text-blue-400">
+                  <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
+                    {user?.avatar_url ? (
+                      <img 
+                        src={user.avatar_url} 
+                        alt={user?.username} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          img.src = `https://ui-avatars.com/api/?name=${user.username}&background=random`;
+                        }} 
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold">
+                        {user?.username?.[0]?.toUpperCase() || '?'}
+                      </div>
+                    )}
+                  </div>
                   <span>{user?.username || '用户'}</span>
                   <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>

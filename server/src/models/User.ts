@@ -8,6 +8,7 @@ export interface User extends RowDataPacket {
     email: string;
     password: string;
     role: string; // 用户角色: 'user' 或 'admin'
+    avatar_path?: string; // 添加可选的头像路径
     created_at: Date;
     last_login: Date | null;
 }
@@ -27,6 +28,7 @@ export const findUserByEmail = async (email: string): Promise<User | null> => {
             email: userRow.email,
             password: userRow.password,
             role: userRow.role,
+            avatar_path: userRow.avatar_path,
             created_at: userRow.created_at,
             last_login: userRow.last_login,
         };
@@ -83,6 +85,7 @@ export const findUserById = async (id: number): Promise<User | null> => {
             email: userRow.email,
             password: userRow.password,
             role: userRow.role,
+            avatar_path: userRow.avatar_path,
             created_at: userRow.created_at,
             last_login: userRow.last_login,
         };
@@ -111,4 +114,13 @@ export const updateLastLogin = async (userId: number): Promise<boolean> => {
         console.error('更新最后登录时间失败:', error);
         return false;
     }
+};
+
+// 更新用户头像
+export const updateUserAvatar = async (userId: number, avatarPath: string): Promise<boolean> => {
+    const [result] = await pool.query<ResultSetHeader>(
+        'UPDATE users SET avatar_path = ? WHERE id = ?',
+        [avatarPath, userId]
+    );
+    return result.affectedRows > 0;
 };

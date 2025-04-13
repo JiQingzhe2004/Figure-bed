@@ -14,6 +14,7 @@ export const initDatabase = async () => {
             email VARCHAR(100) NOT NULL UNIQUE,
             password VARCHAR(100) NOT NULL,
             role ENUM('user', 'admin') DEFAULT 'user',
+            avatar_path VARCHAR(255),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_login TIMESTAMP NULL
         ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`;

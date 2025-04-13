@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { UserInfo, LoginData, RegisterData, AuthResponse } from '../types/auth';
+import { User, LoginData, RegisterData, AuthResponse } from '../types/auth';
 import { loginUser, registerUser, getCurrentUser, logoutUser } from '../services/authService';
 import axiosInstance from '../services/axiosInstance';
 
 // 认证上下文类型定义
 interface AuthContextType {
-  user: UserInfo | null;
+  user: User | null;
   isLoggedIn: boolean;
   isAuthenticated: boolean; // 添加别名属性，与isLoggedIn保持一致
   isAdmin: boolean;
@@ -13,6 +13,7 @@ interface AuthContextType {
   login: (credentials: LoginData) => Promise<AuthResponse>; // 修改返回类型为Promise<AuthResponse>而非void
   register: (userData: RegisterData) => Promise<void>;
   logout: () => void;
+  updateCurrentUser?: (updatedUser: User) => void; // 添加更新用户信息的方法
   error: string | null;
 }
 
@@ -21,7 +22,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // 认证提供者组件
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserInfo | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(localStorage.getItem('authToken'));
   const [loading, setLoading] = useState<boolean>(true);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -97,6 +98,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setAuthToken(null);
   };
 
+  // 添加更新用户信息的方法
+  const updateCurrentUser = (updatedUser: User) => {
+    setUser(updatedUser);
+  };
+
   const contextValue: AuthContextType = {
     user,
     isLoggedIn: !!user,
@@ -106,6 +112,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     login,
     register,
     logout,
+    updateCurrentUser,
     error: authError
   };
 

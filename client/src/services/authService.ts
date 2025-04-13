@@ -1,5 +1,5 @@
 import axiosInstance from './axiosInstance';
-import { RegisterData, LoginData, AuthResponse, UserInfo } from '../types/auth';
+import { RegisterData, LoginData, AuthResponse, User } from '../types/auth';
 
 export const registerUser = async (userData: RegisterData): Promise<AuthResponse> => {
     try {
@@ -27,7 +27,7 @@ export const loginUser = async (credentials: LoginData): Promise<AuthResponse> =
     }
 };
 
-export const getCurrentUser = async (): Promise<UserInfo> => {
+export const getCurrentUser = async (): Promise<User> => {
     try {
         const token = localStorage.getItem('authToken');
         if (!token) {
@@ -35,7 +35,7 @@ export const getCurrentUser = async (): Promise<UserInfo> => {
         }
         
         axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        const response = await axiosInstance.get<{ user: UserInfo }>('/api/auth/me');
+        const response = await axiosInstance.get<{ user: User }>('/api/auth/me');
         return response.data.user;
     } catch (error: any) {
         throw new Error(error.response?.data?.message || '获取用户信息失败');

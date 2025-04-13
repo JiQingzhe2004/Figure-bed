@@ -1,12 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import sharp from 'sharp';
+import fs from 'fs';
+import path from 'path';
 import { 
   findUserByUsername,
   findUserByEmail, 
   createUser, 
   findUserById, 
-  updateLastLogin 
+  updateLastLogin,
+  updateUserAvatar
 } from '../models/User';
 import { getSetting } from '../models/Setting';
 import dotenv from 'dotenv';
@@ -162,18 +166,79 @@ export const getMe = async (req: Request, res: Response, next: NextFunction) => 
             return res.status(404).json({ message: '用户不存在' });
         }
 
-        // 返回不包含密码的用户信息
+        // 获取服务器URL
+        const serverUrl = process.env.REMOTE_SERVER_URL || `http://localhost:${process.env.PORT || 5000}`;
+        
+        // 返回不包含密码的用户信息，添加头像URL
         res.json({
             user: {
                 id: user.id,
                 username: user.username,
                 email: user.email,
                 role: user.role,
-                created_at: user.created_at
+                created_at: user.created_at,
+                avatar_url: user.avatar_path ? `${serverUrl}${user.avatar_path}` : null
             }
         });
     } catch (error) {
         console.error("获取用户信息失败:", error);
+        next(error);
+    }
+};
+
+export const uploadAvatar = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ message: '请先登录' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ message: '没有选择要上传的头像图片' });
+        }
+
+        // 处理头像图片，调整大小为标准尺寸
+        const avatarSize = 200; // 设置标准头像尺寸为200x200
+        const avatarPath = req.file.path;
+        const outputPath = avatarPath; // 覆盖原始文件
+
+        await sharp(avatarPath)
+            .resize(avatarSize, avatarSize)
+            .toFile(outputPath + '.tmp');
+        
+        // 替换原始文件
+        fs.unlinkSync(avatarPath);
+        fs.renameSync(outputPath + '.tmp', avatarPath);
+
+        // 获取相对路径用于数据库存储
+        const relativePath = '/uploads/avatars/' + path.basename(avatarPath);
+
+        // 更新用户头像路径
+        const updated = await updateUserAvatar(req.user.userId, relativePath);
+
+        if (!updated) {
+            return res.status(500).json({ message: '更新头像失败' });
+        }
+
+        // 获取服务器URL用于返回完整路径
+        const serverUrl = process.env.REMOTE_SERVER_URL || `http://localhost:${process.env.PORT || 5000}`;
+        
+        res.status(200).json({
+            message: '头像上传成功',
+            avatar_url: `${serverUrl}${relativePath}`
+        });
+
+    } catch (error) {
+        console.error('上传头像失败:', error);
+        
+        // 如果发生错误，删除已上传的文件
+        if (req.file && fs.existsSync(req.file.path)) {
+            try {
+                fs.unlinkSync(req.file.path);
+            } catch (err) {
+                console.error('删除临时文件失败:', err);
+            }
+        }
+        
         next(error);
     }
 };

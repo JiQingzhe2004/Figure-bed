@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-// 修改导入，使用自定义的axiosInstance而不是直接使用axios
+import { uploadAvatar } from '../services/userService';
 import axiosInstance from '../services/axiosInstance';
 
 const ProfilePage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateCurrentUser } = useAuth();
   const [passwordUpdated, setPasswordUpdated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -14,6 +14,9 @@ const ProfilePage: React.FC = () => {
     confirmPassword: ''
   });
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 初始化主题
   useEffect(() => {
@@ -52,8 +55,6 @@ const ProfilePage: React.FC = () => {
     // 实现密码更新功能
     setLoading(true);
     try {
-      // 修改API路径 - 使用用户API端点
-      // 注意：根据实际API路径进行调整
       const response = await axiosInstance.post('/api/user/password', {
         currentPassword: formData.currentPassword,
         newPassword: formData.newPassword
@@ -73,7 +74,6 @@ const ProfilePage: React.FC = () => {
     } catch (err: any) {
       console.error('密码修改错误:', err);
       
-      // 增强错误处理
       if (err.message === 'Network Error') {
         setError('网络错误，请确认API服务器是否正在运行');
       } else if (err.response?.status === 404) {
@@ -87,6 +87,51 @@ const ProfilePage: React.FC = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 处理头像上传
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
+    
+    // 验证文件类型
+    if (!file.type.startsWith('image/')) {
+      setAvatarError('请上传图片文件');
+      return;
+    }
+    
+    // 验证文件大小 (5MB限制)
+    if (file.size > 5 * 1024 * 1024) {
+      setAvatarError('图片大小不能超过5MB');
+      return;
+    }
+    
+    try {
+      setUploadingAvatar(true);
+      setAvatarError(null);
+      
+      const response = await uploadAvatar(file);
+      
+      // 更新上下文中的用户信息
+      if (user && updateCurrentUser) {
+        updateCurrentUser({
+          ...user,
+          avatar_url: response.avatar_url
+        });
+      }
+    } catch (err: any) {
+      setAvatarError(err.message || '上传头像失败');
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -106,9 +151,45 @@ const ProfilePage: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
         <div className="flex flex-col md:flex-row md:items-center">
           <div className="flex-shrink-0 mb-4 md:mb-0 md:mr-6">
-            <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center text-white text-3xl font-bold">
-              {user?.username?.[0]?.toUpperCase() || '?'}
+            {/* 添加头像上传功能 */}
+            <div 
+              onClick={handleAvatarClick} 
+              className="relative w-24 h-24 rounded-full overflow-hidden cursor-pointer group"
+            >
+              {user?.avatar_url ? (
+                <img 
+                  src={user.avatar_url} 
+                  alt={user.username} 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    img.src = `https://ui-avatars.com/api/?name=${user.username}&background=random`;
+                  }} 
+                />
+              ) : (
+                <div className="w-full h-full bg-blue-500 flex items-center justify-center text-white text-3xl font-bold">
+                  {user?.username?.[0]?.toUpperCase() || '?'}
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-white text-sm">更换头像</span>
+              </div>
+              {uploadingAvatar && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
             </div>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*" 
+              onChange={handleAvatarChange} 
+            />
+            {avatarError && (
+              <p className="mt-2 text-sm text-red-500">{avatarError}</p>
+            )}
           </div>
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">{user?.username}</h2>

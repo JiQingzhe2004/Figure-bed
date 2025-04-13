@@ -1,19 +1,26 @@
 import express from 'express';
-import { register, login, getMe } from '../controllers/authController';
+import * as authController from '../controllers/authController';
 import { authenticateToken } from '../middleware/authMiddleware';
+import { upload } from '../middleware/uploadMiddleware';
 
 const router = express.Router();
 
-router.post('/register', register);
-router.post('/login', login);
-router.get('/me', authenticateToken, getMe); // 添加 /me 路由
+// 用户注册与登录
+router.post('/register', authController.register);
+router.post('/login', authController.login);
 
-// 添加JWT调试路由，帮助验证令牌和用户信息
-router.get('/debug-token', authenticateToken, (req: Request, res: Response) => {
-  res.json({
-    message: '令牌验证成功',
-    user: req.user
-  });
+// 获取当前用户信息
+router.get('/me', authenticateToken, authController.getMe);
+
+// 上传头像
+router.post('/avatar', authenticateToken, upload.single('avatar'), authController.uploadAvatar);
+
+// token验证的调试端点
+router.get('/debug-token', authenticateToken, (req, res) => {
+    res.json({
+        message: '令牌有效',
+        user: req.user
+    });
 });
 
 export default router;
