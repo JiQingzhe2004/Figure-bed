@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2016", // 或者更新的版本如 ES2020, ESNext
+    "module": "NodeNext", // 使用 NodeNext 模块系统
+    "moduleResolution": "NodeNext", // 必须与 module 设置匹配
+    "outDir": "./dist", // 指定编译输出目录
+    "rootDir": "./src", // 指定源文件根目录
+    "strict": true, // 启用所有严格类型检查选项
+    "esModuleInterop": true, // 允许从 CommonJS 模块进行默认导入
+    "skipLibCheck": true, // 跳过声明文件的类型检查
+    "forceConsistentCasingInFileNames": true, // 强制文件名大小写一致
+    "resolveJsonModule": true, // 允许导入 JSON 文件
+    "sourceMap": true, // 生成 source map 文件，便于调试
+    "baseUrl": "./src", // 设置基础目录，用于非相对模块导入
+    "paths": { // 可选：设置路径别名
+      "@/*": ["*"]
+    }
+  },
+  "include": ["src/**/*"], // 指定需要编译的文件/目录
+  "exclude": ["node_modules", "**/*.spec.ts", "dist"] // 指定排除的文件/目录
+}
