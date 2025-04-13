@@ -4,7 +4,7 @@ import { RowDataPacket } from 'mysql2';
 import path from 'path';
 import fs from 'fs';
 import { updateUserRole as updateUserRoleModel, findUserById } from '../models/User';
-import { countImages, getAllImages as getAllImagesModel, getImageById, deleteImage } from '../models/Image';
+import { countImages, getAllImages as getAllImagesModel, getImageById, deleteImage, deleteImages, deleteMultipleImages } from '../models/Image';
 
 // 获取所有用户
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
@@ -278,6 +278,64 @@ export const deleteImageAdmin = async (req: Request, res: Response, next: NextFu
     } catch (error) {
         console.error('删除图片失败:', error);
         next(error);
+    }
+};
+
+// 批量删除图片
+export const deleteImages = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { imageIds } = req.body;
+        
+        if (!Array.isArray(imageIds) || imageIds.length === 0) {
+            return res.status(400).json({ message: '请至少选择一张图片' });
+        }
+
+        // 获取所有要删除的图片信息
+        const imagesPromises = imageIds.map(id => getImageById(id));
+        const images = await Promise.all(imagesPromises);
+        const validImages = images.filter(image => image !== null);
+
+        if (validImages.length === 0) {
+            return res.status(404).json({ message: '未找到要删除的图片' });
+        }
+
+        // 删除文件
+        const deletedFiles: string[] = [];
+        for (const image of validImages) {
+            try {
+                // 删除原始图片
+                const filePath = path.join(__dirname, '../../uploads', path.basename(image.file_path));
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                    deletedFiles.push(filePath);
+                }
+
+                // 删除缩略图
+                if (image.thumbnail_path) {
+                    const thumbnailPath = path.join(__dirname, '../../uploads', path.basename(image.thumbnail_path));
+                    if (fs.existsSync(thumbnailPath)) {
+                        fs.unlinkSync(thumbnailPath);
+                        deletedFiles.push(thumbnailPath);
+                    }
+                }
+            } catch (err) {
+                console.error(`删除文件失败: ${image.file_path}`, err);
+                // 继续处理其他文件
+            }
+        }
+
+        // 从数据库中删除记录
+        const result = await deleteMultipleImages(imageIds);
+
+        res.json({
+            message: `成功删除 ${result.affectedRows} 张图片`,
+            deletedCount: result.affectedRows,
+            deletedFiles: deletedFiles
+        });
+
+    } catch (error) {
+        console.error('批量删除图片失败:', error);
+        res.status(500).json({ message: '批量删除图片失败', error: error.message });
     }
 };
 

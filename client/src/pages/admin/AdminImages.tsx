@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAllImages, deleteImageAdmin } from '../../services/adminService';
+import { getAllImages, deleteImageAdmin, deleteImagesAdmin } from '../../services/adminService';
 import { ImageData } from '../../types/image';
 import { fixImageUrl } from '../../utils/imageUtils';
 import AdminImageCard from '../../components/admin/ImageCard';
@@ -13,6 +13,7 @@ const AdminImages: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
+  const [selectedImages, setSelectedImages] = useState<number[]>([]);
 
   const fetchImages = async () => {
     try {
@@ -43,6 +44,38 @@ const AdminImages: React.FC = () => {
       setDeleteConfirm(null);
     } catch (err: any) {
       setError(err.message || '删除图片失败');
+    }
+  };
+
+  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
+      setSelectedImages(images.map(img => img.id));
+    } else {
+      setSelectedImages([]);
+    }
+  };
+
+  const handleSelect = (imageId: number) => {
+    setSelectedImages(prev => {
+      if (prev.includes(imageId)) {
+        return prev.filter(id => id !== imageId);
+      } else {
+        return [...prev, imageId];
+      }
+    });
+  };
+
+  const handleBatchDelete = async () => {
+    if (!window.confirm(`确定要删除选中的 ${selectedImages.length} 张图片吗？此操作不可恢复。`)) {
+      return;
+    }
+
+    try {
+      await deleteImagesAdmin(selectedImages);
+      setImages(images.filter(img => !selectedImages.includes(img.id)));
+      setSelectedImages([]);
+    } catch (err: any) {
+      setError(err.message || '批量删除失败');
     }
   };
 
@@ -81,8 +114,21 @@ const AdminImages: React.FC = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6 dark:text-white">图片管理</h1>
-      
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold dark:text-white">图片管理</h1>
+        {selectedImages.length > 0 && (
+          <button
+            onClick={handleBatchDelete}
+            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md flex items-center"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            删除所选 ({selectedImages.length})
+          </button>
+        )}
+      </div>
+
       {error && (
         <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
           <p className="font-bold">错误</p>
@@ -95,6 +141,14 @@ const AdminImages: React.FC = () => {
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
+                <th scope="col" className="px-6 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                    checked={selectedImages.length === images.length && images.length > 0}
+                    onChange={handleSelectAll}
+                  />
+                </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   预览
                 </th>
@@ -124,6 +178,14 @@ const AdminImages: React.FC = () => {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {images.map(image => (
                 <tr key={image.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                      checked={selectedImages.includes(image.id)}
+                      onChange={() => handleSelect(image.id)}
+                    />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="h-10 w-10 rounded bg-gray-100 dark:bg-gray-700 overflow-hidden">
                       <img 

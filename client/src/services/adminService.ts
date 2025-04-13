@@ -77,3 +77,15 @@ export const deleteImageAdmin = async (imageId: number) => {
     throw new Error(error.response?.data?.message || '删除图片失败');
   }
 };
+
+// 批量删除图片（管理员）
+export const deleteImagesAdmin = async (imageIds: number[]) => {
+  try {
+    const response = await axiosInstance.delete('/api/admin/images', {
+      data: { imageIds }
+    });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || '批量删除图片失败');
+  }
+};

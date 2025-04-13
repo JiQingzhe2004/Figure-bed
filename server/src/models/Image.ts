@@ -114,3 +114,12 @@ export const countImages = async (isPublic?: boolean, userId?: number): Promise<
     const [rows] = await pool.query<RowDataPacket[]>(sql, params);
     return rows[0].count;
 };
+
+// 批量删除图片
+export const deleteMultipleImages = async (imageIds: number[]): Promise<ResultSetHeader> => {
+    const [result] = await pool.query<ResultSetHeader>(
+        'DELETE FROM images WHERE id IN (?)',
+        [imageIds]
+    );
+    return result;
+};
