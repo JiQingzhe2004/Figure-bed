@@ -2,6 +2,8 @@ import { getApiBaseUrl } from './apiUtils';
 
 // 存储已处理过的URL映射，避免重复处理
 const urlCache = new Map();
+// 预加载的图片缓存
+const preloadCache = new Map();
 
 /**
  * 修复图片URL，确保使用正确的服务器地址
@@ -54,6 +56,68 @@ export const fixImageUrl = (url) => {
  */
 export const clearImageUrlCache = () => {
   urlCache.clear();
+};
+
+/**
+ * 预加载图片并缓存
+ * @param {string} url - 要预加载的图片URL
+ * @returns {Promise} 返回一个Promise，加载完成后解析
+ */
+export const preloadImage = (url) => {
+  if (!url) return Promise.resolve();
+  
+  const fixedUrl = fixImageUrl(url);
+  
+  // 如果已经加载过，直接返回缓存的Promise
+  if (preloadCache.has(fixedUrl)) {
+    return preloadCache.get(fixedUrl);
+  }
+
+  // 创建新的预加载Promise
+  const promise = new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = fixedUrl;
+  });
+  
+  // 存入缓存
+  preloadCache.set(fixedUrl, promise);
+  
+  return promise;
+};
+
+/**
+ * 批量预加载图片
+ * @param {Array<string>} urls - 图片URL数组 
+ * @param {number} concurrency - 同时加载的最大数量
+ */
+export const preloadImages = async (urls, concurrency = 3) => {
+  if (!urls || urls.length === 0) return;
+
+  // 过滤掉空值
+  const validUrls = urls.filter(Boolean);
+  
+  // 如果并发数大于图片数，则直接全部加载
+  if (concurrency >= validUrls.length) {
+    return Promise.all(validUrls.map(preloadImage));
+  }
+  
+  // 否则控制并发数
+  const results = [];
+  for (let i = 0; i < validUrls.length; i += concurrency) {
+    const batch = validUrls.slice(i, i + concurrency);
+    results.push(...await Promise.allSettled(batch.map(preloadImage)));
+  }
+  
+  return results;
+};
+
+/**
+ * 清理预加载缓存
+ */
+export const clearPreloadCache = () => {
+  preloadCache.clear();
 };
 
 /**

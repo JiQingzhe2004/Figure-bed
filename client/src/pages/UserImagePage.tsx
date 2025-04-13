@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getUserImages, deleteImage, toggleImagePublicStatus } from '../services/imageService';
 import { ImageData } from '../types/image';
+import LazyImage from '../components/image/LazyImage';
 
 const UserImagePage: React.FC = () => {
   const [images, setImages] = useState<ImageData[]>([]);
@@ -82,11 +83,11 @@ const UserImagePage: React.FC = () => {
               <div key={image.id} className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md">
                 <Link to={`/image/${image.id}`}>
                   <div className="aspect-w-16 aspect-h-9 bg-gray-200 dark:bg-gray-700">
-                    <img 
-                      src={image.thumbnail_url || image.url} 
-                      alt={image.original_name} 
-                      className="object-cover w-full h-full"
-                      loading="lazy"
+                    <LazyImage
+                      src={image.url}
+                      thumbnailSrc={image.thumbnail_url}
+                      alt={image.original_name}
+                      className="w-full h-full"
                     />
                   </div>
                 </Link>
@@ -100,16 +101,20 @@ const UserImagePage: React.FC = () => {
                       {image.is_public ? "公开" : "私密"}
                     </span>
                   </div>
-                  <div className="mt-4 flex space-x-2">
-                    <button 
+                  <div className="mt-3 flex justify-between">
+                    <button
                       onClick={() => handleTogglePublic(image.id)}
-                      className="flex-1 px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 text-sm rounded"
+                      className={`text-xs px-2 py-1 rounded ${
+                        image.is_public
+                          ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800'
+                          : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800'
+                      }`}
                     >
-                      {image.is_public ? "设为私密" : "设为公开"}
+                      {image.is_public ? '设为私密' : '设为公开'}
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDelete(image.id)}
-                      className="flex-1 px-3 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900 dark:hover:bg-red-800 text-red-800 dark:text-red-200 text-sm rounded"
+                      className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                     >
                       删除
                     </button>

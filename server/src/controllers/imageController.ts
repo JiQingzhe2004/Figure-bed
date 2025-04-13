@@ -37,6 +37,7 @@ export const uploadImage = async (req: Request, res: Response, next: NextFunctio
     try {
         console.log('上传请求接收到，用户:', req.user?.username);
         console.log('文件信息:', req.file);
+        console.log('表单数据:', req.body);
         
         // 检查是否有文件上传
         if (!req.file) {
@@ -80,9 +81,17 @@ export const uploadImage = async (req: Request, res: Response, next: NextFunctio
         }
 
         // 处理可能包含特殊字符的文件名
-        const originalName = sanitizeFileName(req.file.originalname);
-        console.log('原始文件名:', req.file.originalname);
-        console.log('处理后文件名:', originalName);
+        // 检查是否提供了自定义文件名
+        let originalName;
+        if (req.body.custom_filename) {
+            // 使用客户端提供的自定义文件名
+            originalName = sanitizeFileName(req.body.custom_filename);
+            console.log('使用客户端提供的文件名:', originalName);
+        } else {
+            // 使用原始上传的文件名
+            originalName = sanitizeFileName(req.file.originalname);
+            console.log('使用原始上传文件名:', originalName);
+        }
 
         // 获取是否公开参数
         const isPublic = req.body.is_public !== 'false';

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { getPublicImages } from '../services/imageService';
 import { getSettings } from '../services/settingService';
 import { ImageData } from '../types/image';
 import Masonry from 'react-masonry-css';
-import { fixImageUrl } from '../utils/imageUtils';
+import LazyImage from '../components/image/LazyImage';
 
 const HomePage: React.FC = () => {
   const [images, setImages] = useState<ImageData[]>([]);
@@ -16,6 +16,13 @@ const HomePage: React.FC = () => {
     site_name: '我的图床',
     site_description: '简单好用的图片存储服务'
   });
+
+  // 使用useCallback优化函数
+  const loadMore = useCallback(() => {
+    if (!loading && hasMore) {
+      setPage(prevPage => prevPage + 1);
+    }
+  }, [loading, hasMore]);
 
   useEffect(() => {
     // 获取站点设置
@@ -51,11 +58,20 @@ const HomePage: React.FC = () => {
     fetchImages();
   }, [page]);
 
-  const loadMore = () => {
-    if (!loading && hasMore) {
-      setPage(prevPage => prevPage + 1);
-    }
-  };
+  // 添加自动加载更多功能
+  useEffect(() => {
+    const handleScroll = () => {
+      // 当用户滚动到距离底部200px时自动加载更多
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
+        loadMore();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [loadMore]);
 
   // 瀑布流的断点设置
   const breakpointColumnsObj = {
@@ -83,15 +99,15 @@ const HomePage: React.FC = () => {
       </div>
 
       {/* 图片展示区 */}
-      <h2 className="text-2xl font-semibold mb-6">最新公开图片</h2>
-      
+      <h2 className="text-2xl font-semibold mb-6">公开图片</h2>
+      <hr className="my-6" />
       {error && (
         <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
           <p>{error}</p>
         </div>
       )}
 
-      {/* 使用Masonry组件替代原有grid */}
+      {/* 使用Masonry组件实现瀑布流 */}
       <Masonry
         breakpointCols={breakpointColumnsObj}
         className="flex w-auto -ml-4" // 负外边距补偿子元素的间距
@@ -101,20 +117,17 @@ const HomePage: React.FC = () => {
           <div key={image.id} className="mb-4 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
             <Link to={`/image/${image.id}`}>
               <div className="relative">
-                <img
-                  src={fixImageUrl(image.thumbnail_url || image.url)}
+                {/* 使用LazyImage组件，优先加载缩略图 */}
+                <LazyImage
+                  thumbnailSrc={image.thumbnail_url} // 优先使用缩略图
+                  src={image.url} // 缩略图不存在时使用原图
                   alt={image.original_name}
-                  className="w-full h-auto" // 高度自适应，保持原始比例
-                  loading="lazy"
-                  onError={(e) => {
-                    const img = e.target as HTMLImageElement;
-                    if (!img.dataset.retried) {
-                      img.dataset.retried = "true";
-                      img.src = '/images/placeholder.png';
-                    }
-                  }}
+                  className="w-full" // 保持原有宽度
+                  // 根据图片原始尺寸设置宽高比
+                  aspectRatio={image.width && image.height ? `${image.width} / ${image.height}` : undefined}
                 />
-                {/* 可选：添加图片尺寸信息悬浮层 */}
+                
+                {/* 图片尺寸信息悬浮层 */}
                 {image.width && image.height && (
                   <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
                     {image.width} × {image.height}
@@ -132,17 +145,23 @@ const HomePage: React.FC = () => {
         ))}
       </Masonry>
 
-      {/* 加载更多按钮 */}
+      {/* 加载更多/底部提示 */}
       {images.length > 0 && (
-        <div className="mt-10 text-center">
+        <div className="mt-10 text-center pb-6">
           {hasMore ? (
-            <button
-              onClick={loadMore}
-              disabled={loading}
-              className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-md shadow-md transition duration-300 disabled:bg-blue-300"
-            >
-              {loading ? '加载中...' : '加载更多'}
-            </button>
+            loading ? (
+              <div className="inline-flex items-center text-gray-500 dark:text-gray-400">
+                <div className="mr-3 w-5 h-5 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
+                加载更多中...
+              </div>
+            ) : (
+              <button
+                onClick={loadMore}
+                className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-md shadow-md transition"
+              >
+                加载更多
+              </button>
+            )
           ) : (
             <p className="text-gray-500 dark:text-gray-400">已经到底啦，没有更多图片了~</p>
           )}
@@ -150,7 +169,7 @@ const HomePage: React.FC = () => {
       )}
 
       {/* 初始加载提示 */}
-      {loading && page === 1 && (
+      {loading && page === 1 && images.length === 0 && (
         <div className="flex justify-center items-center h-[200px]">
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
         </div>

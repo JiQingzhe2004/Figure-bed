@@ -1,46 +1,41 @@
 import axiosInstance from './axiosInstance';
 import { ImageResponse, ImageListResponse, ImageData } from '../types/image';
+import { AxiosRequestConfig } from 'axios';
 
-export const uploadImage = async (file: File, isPublic: boolean = true): Promise<ImageResponse> => {
-  const formData = new FormData();
-  formData.append('image', file);
-  formData.append('is_public', isPublic.toString());
-  
+export const uploadImage = async (formData: FormData, onProgress?: (progress: number) => void): Promise<ImageResponse> => {
   try {
-    console.log('开始上传图片...');
-    console.log('图片大小:', (file.size / 1024).toFixed(2) + ' KB');
-    console.log('图片类型:', file.type);
+    // 检查和记录上传内容，帮助调试
+    const imageFile = formData.get('image') as File;
+    if (!imageFile) {
+      console.error('表单数据中没有找到image文件');
+      throw new Error('上传准备不完整：未选择图片文件');
+    }
     
-    // 增加调试信息
-    console.log('文件名:', file.name);
-    console.log('上传端点:', '/api/images/upload');
-    
-    const response = await axiosInstance.post<ImageResponse>('/api/images/upload', formData, {
+    const axiosConfig: AxiosRequestConfig = {
       headers: {
         'Content-Type': 'multipart/form-data'
       },
-      timeout: 30000, // 增加上传超时时间为30秒
-      onUploadProgress: (progressEvent) => {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || file.size));
-        console.log(`上传进度: ${percentCompleted}%`);
-      }
-    });
-    
-    console.log('上传成功!', response.data);
+      timeout: 30000
+    };
+
+    if (onProgress) {
+      axiosConfig.onUploadProgress = (progressEvent: any) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
+        onProgress(percentCompleted);
+      };
+    }
+
+    const response = await axiosInstance.post<ImageResponse>('/api/images/upload', formData, axiosConfig);
     return response.data;
   } catch (error: any) {
     console.error('上传图片失败:', error);
     
-    // 增强错误日志
     if (error.response) {
-      // 服务器返回了错误响应
       console.error('服务器错误状态:', error.response.status);
       console.error('服务器错误数据:', error.response.data);
     } else if (error.request) {
-      // 请求已发送但没有收到响应
       console.error('没有收到服务器响应');
     } else {
-      // 设置请求时发生了错误
       console.error('请求配置错误:', error.message);
     }
     
