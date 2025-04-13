@@ -1,16 +1,13 @@
-import express from 'express';
-import { getSettings, updateSetting, updateMultipleSettings } from '../controllers/settingController';
-import { authenticateToken, isAdmin } from '../middleware/authMiddleware';
+import { Router } from 'express';
+import { authenticateToken, isAdmin } from '../middleware/auth';
+import * as settingController from '../controllers/settingController';
 
-const router = express.Router();
+const router = Router();
 
 // 获取所有设置（公开）
-router.get('/', getSettings);
+router.get('/', settingController.getSettings);
 
-// 更新单个设置（需要管理员权限）
-router.put('/:key', authenticateToken, isAdmin, updateSetting);
-
-// 批量更新设置（需要管理员权限）
-router.put('/', authenticateToken, isAdmin, updateMultipleSettings);
+// 更新设置（需要管理员权限）
+router.post('/', authenticateToken, isAdmin, settingController.updateSettings);
 
 export default router;

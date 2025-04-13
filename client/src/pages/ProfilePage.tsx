@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+// 修改导入，使用自定义的axiosInstance而不是直接使用axios
+import axiosInstance from '../services/axiosInstance';
 
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
@@ -11,6 +13,22 @@ const ProfilePage: React.FC = () => {
     newPassword: '',
     confirmPassword: ''
   });
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  // 初始化主题
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' || 'light';
+    setTheme(savedTheme);
+    document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+  }, []);
+
+  // 切换主题
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -31,21 +49,42 @@ const ProfilePage: React.FC = () => {
       return;
     }
     
-    // TODO: 实现密码更新功能
+    // 实现密码更新功能
     setLoading(true);
     try {
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setPasswordUpdated(true);
-      setError(null);
-      setFormData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+      // 修改API路径 - 使用用户API端点
+      // 注意：根据实际API路径进行调整
+      const response = await axiosInstance.post('/api/user/password', {
+        currentPassword: formData.currentPassword,
+        newPassword: formData.newPassword
       });
+      
+      if (response.data.success) {
+        setPasswordUpdated(true);
+        setError(null);
+        setFormData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+      } else {
+        setError(response.data.message || '密码更新失败');
+      }
     } catch (err: any) {
-      setError(err.message || '密码更新失败');
+      console.error('密码修改错误:', err);
+      
+      // 增强错误处理
+      if (err.message === 'Network Error') {
+        setError('网络错误，请确认API服务器是否正在运行');
+      } else if (err.response?.status === 404) {
+        setError('找不到修改密码的API端点，请联系管理员确认API路径');
+      } else if (err.response?.status === 401) {
+        setError('认证失败，请重新登录');
+      } else if (err.response?.status === 403) {
+        setError('您没有权限执行此操作');
+      } else {
+        setError(err.response?.data?.message || err.message || '密码更新失败');
+      }
     } finally {
       setLoading(false);
     }
@@ -53,7 +92,15 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6 dark:text-white">个人资料</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold dark:text-white">个人资料</h1>
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white"
+        >
+          {theme === 'light' ? '🌙' : '☀️'}
+        </button>
+      </div>
       
       {/* 用户信息卡片 */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">

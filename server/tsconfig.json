@@ -14,8 +14,11 @@
     "baseUrl": "./src", // 设置基础目录，用于非相对模块导入
     "paths": { // 可选：设置路径别名
       "@/*": ["*"]
-    }
+    },
+    "typeRoots": ["./node_modules/@types", "./src/types"],
+    "allowJs": true,
+    "checkJs": false
   },
-  "include": ["src/**/*"], // 指定需要编译的文件/目录
-  "exclude": ["node_modules", "**/*.spec.ts", "dist"] // 指定排除的文件/目录
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }

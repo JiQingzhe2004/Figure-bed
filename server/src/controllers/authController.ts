@@ -1,7 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { findUserByEmail, findUserByUsername, createUser, findUserById, User } from '../models/User';
+import { 
+  findUserByUsername,
+  findUserByEmail, 
+  createUser, 
+  findUserById, 
+  updateLastLogin 
+} from '../models/User';
 import { getSetting } from '../models/Setting';
 import dotenv from 'dotenv';
 
@@ -44,7 +50,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         const password_hash = await bcrypt.hash(password, salt);
 
         // 创建用户
-        const newUser: Omit<User, 'id' | 'created_at'> = { username, email, password_hash, role: 'user' };
+        const newUser = { username, email, password: password_hash, role: 'user' };
         const userId = await createUser(newUser);
 
         // 生成JWT令牌，有效期30天
@@ -65,50 +71,80 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 };
 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
-    const { email, username, password } = req.body;
-
-    // 基本验证
-    if ((!email && !username) || !password) {
-        return res.status(400).json({ message: '请提供邮箱/用户名和密码' });
-    }
-
     try {
-        // 根据邮箱或用户名查找用户
-        let user = null;
-        if (email) {
-            user = await findUserByEmail(email);
-        } else if (username) {
-            user = await findUserByUsername(username);
+        const { username, password } = req.body;
+        
+        if (!username || !password) {
+            return res.status(400).json({ message: '用户名和密码不能为空' });
         }
-
+        
+        console.log(`尝试登录用户: ${username}`);
+        
+        // 查找用户
+        const user = await findUserByUsername(username);
+        
+        // 验证用户存在
         if (!user) {
-            return res.status(401).json({ message: '用户名/邮箱或密码不正确' });
+            console.log(`用户 ${username} 不存在`);
+            return res.status(401).json({ message: '用户名或密码不正确' });
         }
-
+        
+        console.log(`找到用户: ${user.username}, 角色: ${user.role}`);
+        
+        // 检查密码是否存在
+        if (!user.password) {
+            console.error('用户密码字段为空');
+            return res.status(401).json({ message: '用户名或密码不正确' });
+        }
+        
         // 验证密码
-        const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-        if (!isPasswordValid) {
-            return res.status(401).json({ message: '用户名/邮箱或密码不正确' });
+        try {
+            const validPassword = await bcrypt.compare(password, user.password);
+            if (!validPassword) {
+                console.log('密码验证失败');
+                return res.status(401).json({ message: '用户名或密码不正确' });
+            }
+        } catch (bcryptError) {
+            console.error('密码验证出错:', bcryptError);
+            return res.status(401).json({ message: '用户名或密码不正确' });
         }
-
-        // 生成JWT令牌，有效期30天
-        const tokenPayload = { userId: user.id!, username: user.username };
-        const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '30d' });
-
-        // 发送响应
+        
+        console.log(`用户 ${username} 密码验证通过`);
+        
+        // 更新最后登录时间
+        try {
+            await updateLastLogin(user.id);
+        } catch (loginUpdateError) {
+            // 记录错误但不中断登录流程
+            console.error('更新登录时间失败:', loginUpdateError);
+        }
+        
+        // 创建JWT令牌
+        const token = jwt.sign(
+            { 
+                userId: user.id, 
+                username: user.username, 
+                email: user.email,
+                role: user.role
+            },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+        
+        // 返回用户信息和令牌
         res.json({
             message: '登录成功',
-            token,
             user: {
                 id: user.id,
                 username: user.username,
                 email: user.email,
                 role: user.role
-            }
+            },
+            token
         });
-
+        
     } catch (error) {
-        console.error("登录失败:", error);
+        console.error('登录失败:', error);
         next(error);
     }
 };

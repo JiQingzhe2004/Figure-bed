@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getImageById, deleteImage } from '../services/imageService';
 import { useAuth } from '../context/AuthContext';
 import { ImageData } from '../types/image';
+import { fixImageUrl } from '../utils/imageUtils';
 
 const ImageDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -47,6 +48,22 @@ const ImageDetailPage: React.FC = () => {
     }
   };
   
+  const handleDownload = async () => {
+    if (!image) return;
+    
+    try {
+      const imageUrl = fixImageUrl(image.url);
+      const link = document.createElement('a');
+      link.href = imageUrl;
+      link.download = image.original_name || `image-${image.id}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err: any) {
+      setError(err.message || '下载图片失败');
+    }
+  };
+  
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
       .then(() => {
@@ -59,6 +76,27 @@ const ImageDetailPage: React.FC = () => {
   };
   
   const canEdit = user && image && (user.id === image.user_id || user.role === 'admin');
+  
+  const imageElement = useMemo(() => {
+    if (!image) return null;
+    
+    return (
+      <img 
+        src={fixImageUrl(image.thumbnail_url || image.url)}
+        alt={image.original_name || "Image"} 
+        className="max-w-full max-h-[70vh] object-contain"
+        onError={(e) => {
+          const img = e.target as HTMLImageElement;
+          if (img.dataset.retried) return;
+          
+          img.dataset.retried = "true";
+          img.onerror = null;
+          img.src = '/images/placeholder.png';
+          console.warn(`图片加载失败: ${image?.url}`);
+        }}
+      />
+    );
+  }, [image]);
   
   if (loading) {
     return (
@@ -96,12 +134,20 @@ const ImageDetailPage: React.FC = () => {
     <div className="max-w-4xl mx-auto">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
         {/* 图片显示区 */}
-        <div className="p-4 bg-gray-50 dark:bg-gray-900 flex justify-center">
-          <img 
-            src={image.url} 
-            alt={image.original_name} 
-            className="max-w-full max-h-[70vh] object-contain"
-          />
+        <div className="p-4 bg-gray-50 dark:bg-gray-900 flex justify-center relative">
+          {imageElement}
+        
+          {image && (
+            <button 
+              onClick={handleDownload}
+              className="absolute top-4 right-4 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-2 shadow-lg"
+              title="下载原始图片"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            </button>
+          )}
         </div>
         
         {/* 图片信息 */}
@@ -153,11 +199,11 @@ const ImageDetailPage: React.FC = () => {
                   <input 
                     type="text" 
                     readOnly 
-                    value={image.url} 
+                    value={image ? fixImageUrl(image.url) : ''} 
                     className="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l px-3 py-2 text-gray-800 dark:text-gray-200"
                   />
                   <button 
-                    onClick={() => copyToClipboard(image.url)}
+                    onClick={() => image && copyToClipboard(fixImageUrl(image.url))}
                     className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r"
                   >
                     复制
@@ -173,11 +219,11 @@ const ImageDetailPage: React.FC = () => {
                   <input 
                     type="text" 
                     readOnly 
-                    value={`![${image.original_name}](${image.url})`}
+                    value={`![${image.original_name}](${fixImageUrl(image.url)})`}
                     className="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l px-3 py-2 text-gray-800 dark:text-gray-200"
                   />
                   <button 
-                    onClick={() => copyToClipboard(`![${image.original_name}](${image.url})`)}
+                    onClick={() => copyToClipboard(`![${image.original_name}](${fixImageUrl(image.url)})`)}
                     className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r"
                   >
                     复制
@@ -193,11 +239,11 @@ const ImageDetailPage: React.FC = () => {
                   <input 
                     type="text" 
                     readOnly 
-                    value={`<img src="${image.url}" alt="${image.original_name}" />`}
+                    value={`<img src="${fixImageUrl(image.url)}" alt="${image.original_name}" />`}
                     className="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l px-3 py-2 text-gray-800 dark:text-gray-200"
                   />
                   <button 
-                    onClick={() => copyToClipboard(`<img src="${image.url}" alt="${image.original_name}" />`)}
+                    onClick={() => copyToClipboard(`<img src="${fixImageUrl(image.url)}" alt="${image.original_name}" />`)}
                     className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r"
                   >
                     复制
@@ -214,16 +260,23 @@ const ImageDetailPage: React.FC = () => {
           )}
           
           {/* 操作按钮 */}
-          {canEdit && (
-            <div className="mt-6 flex justify-end space-x-4">
+          <div className="mt-6 flex justify-end space-x-4">
+            <button 
+              onClick={handleDownload}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded"
+            >
+              下载原图
+            </button>
+            
+            {canEdit && (
               <button 
                 onClick={handleDelete}
                 className="bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-6 rounded"
               >
                 删除图片
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

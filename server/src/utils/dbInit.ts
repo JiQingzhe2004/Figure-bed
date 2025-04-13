@@ -1,98 +1,170 @@
 import pool from '../config/db';
 import bcrypt from 'bcryptjs';
-import { getDefaultSettings } from '../models/Setting';
 
-export const initDatabase = async (): Promise<void> => {
-    const connection = await pool.getConnection();
-    
+// 初始化数据库函数
+export const initDatabase = async () => {
     try {
         console.log('开始初始化数据库...');
+
+        // 创建users表
+        const usersTableSql = `
+        CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(50) NOT NULL UNIQUE,
+            email VARCHAR(100) NOT NULL UNIQUE,
+            password VARCHAR(100) NOT NULL,
+            role ENUM('user', 'admin') DEFAULT 'user',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_login TIMESTAMP NULL
+        ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`;
         
-        // 创建users表 - 添加utf8mb4字符集
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS users (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                username VARCHAR(50) NOT NULL UNIQUE,
-                email VARCHAR(100) NOT NULL UNIQUE,
-                password_hash VARCHAR(100) NOT NULL,
-                role ENUM('user', 'admin') DEFAULT 'user',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-        `);
-        console.log('✓ users表创建成功');
+        await pool.query(usersTableSql);
+        console.log('Users表已初始化');
+
+        // 创建images表，包含thumbnail_path字段
+        const imagesTableSql = `
+        CREATE TABLE IF NOT EXISTS images (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            filename VARCHAR(255) NOT NULL,
+            original_name VARCHAR(255) NOT NULL,
+            file_path VARCHAR(255) NOT NULL,
+            file_size INT NOT NULL,
+            file_type VARCHAR(100) NOT NULL,
+            width INT,
+            height INT,
+            is_public BOOLEAN DEFAULT TRUE,
+            thumbnail_path VARCHAR(255),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`;
         
-        // 创建images表 - 添加utf8mb4字符集
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS images (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                filename VARCHAR(255) NOT NULL,
-                original_name VARCHAR(255) NOT NULL,
-                file_path VARCHAR(255) NOT NULL,
-                file_size INT NOT NULL,
-                file_type VARCHAR(50) NOT NULL,
-                width INT,
-                height INT,
-                is_public BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-        `);
-        console.log('✓ images表创建成功');
+        await pool.query(imagesTableSql);
+        console.log('Images表已初始化');
+
+        // 创建settings表
+        const settingsTableSql = `
+        CREATE TABLE IF NOT EXISTS settings (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            setting_key VARCHAR(50) NOT NULL UNIQUE,
+            setting_value TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`;
         
-        // 创建settings表 - 添加utf8mb4字符集
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS settings (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                setting_key VARCHAR(50) NOT NULL UNIQUE,
-                setting_value TEXT,
-                setting_description VARCHAR(255),
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-        `);
-        console.log('✓ settings表创建成功');
+        await pool.query(settingsTableSql);
+        console.log('Settings表已初始化');
+
+        // 检查并修复现有表的字符集
+        await upgradeTablesCharset();
         
-        // 检查是否已经有管理员账户
-        const [adminRows] = await connection.query('SELECT * FROM users WHERE role = "admin" LIMIT 1');
+        // 添加默认管理员账号
+        await createDefaultAdmin();
         
-        if (Array.isArray(adminRows) && adminRows.length === 0) {
-            // 创建默认管理员账户
-            const salt = await bcrypt.genSalt(10);
-            const adminPassword = 'admin123'; // 默认密码
-            const passwordHash = await bcrypt.hash(adminPassword, salt);
+        // 添加默认设置
+        await insertDefaultSettings();
+
+        console.log('数据库初始化完成');
+    } catch (error) {
+        console.error('初始化数据库失败:', error);
+        throw error;
+    }
+};
+
+// 修复表的字符集（从upgradeDb.ts合并）
+const upgradeTablesCharset = async () => {
+    try {
+        // 获取所有表
+        const [tables] = await pool.query('SHOW TABLES');
+        
+        for (const tableRow of tables as any[]) {
+            const tableName = Object.values(tableRow)[0] as string;
             
-            await connection.query(
-                'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)',
-                ['admin', 'admin@example.com', passwordHash, 'admin']
+            // 修改表字符集
+            await pool.query(
+                `ALTER TABLE ${tableName} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
             );
-            console.log('✓ 创建了默认管理员账户 (用户名: admin, 密码: admin123)');
+            
+            // 获取表的所有列
+            const [columns] = await pool.query(`SHOW FULL COLUMNS FROM ${tableName}`);
+            
+            for (const column of columns as any[]) {
+                if (column.Type.includes('varchar') || column.Type.includes('text')) {
+                    // 修改列字符集
+                    await pool.query(
+                        `ALTER TABLE ${tableName} MODIFY ${column.Field} ${column.Type} 
+                        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+                    );
+                }
+            }
         }
         
-        // 插入默认设置
-        const defaultSettings = getDefaultSettings();
+        console.log('所有表已升级为utf8mb4字符集');
+    } catch (error) {
+        console.error('升级表字符集失败:', error);
+        throw error;
+    }
+};
+
+// 创建默认管理员账号
+const createDefaultAdmin = async () => {
+    try {
+        // 检查是否已有管理员账号
+        const [admins] = await pool.query('SELECT * FROM users WHERE role = ?', ['admin']);
+        
+        if ((admins as any[]).length === 0) {
+            const defaultPassword = 'admin123';  // 默认密码
+            const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+            
+            // 使用事务确保操作完整性
+            await pool.query('START TRANSACTION');
+            
+            try {
+                await pool.query(
+                    'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
+                    ['admin', 'admin@example.com', hashedPassword, 'admin']
+                );
+                
+                await pool.query('COMMIT');
+                console.log('已创建默认管理员账号 (用户名: admin, 密码: admin123)');
+            } catch (error) {
+                await pool.query('ROLLBACK');
+                throw error;
+            }
+        }
+    } catch (error) {
+        console.error('创建默认管理员账号失败:', error);
+    }
+};
+
+// 插入默认设置
+const insertDefaultSettings = async () => {
+    try {
+        const defaultSettings = [
+            { key: 'site_name', value: '图床应用' },
+            { key: 'site_description', value: '简单好用的图片管理工具' },
+            { key: 'allow_registration', value: 'true' },
+            { key: 'max_upload_size', value: '10485760' },  // 10MB
+            { key: 'allowed_file_types', value: 'image/jpeg,image/png,image/gif,image/webp' }
+        ];
+        
         for (const setting of defaultSettings) {
             // 检查设置是否已存在
-            const [settingRows] = await connection.query(
-                'SELECT * FROM settings WHERE setting_key = ?', 
+            const [existingSetting] = await pool.query(
+                'SELECT * FROM settings WHERE setting_key = ?',
                 [setting.key]
             );
             
-            if (Array.isArray(settingRows) && settingRows.length === 0) {
-                await connection.query(
-                    'INSERT INTO settings (setting_key, setting_value, setting_description) VALUES (?, ?, ?)',
-                    [setting.key, setting.value, setting.description]
+            if ((existingSetting as any[]).length === 0) {
+                await pool.query(
+                    'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)',
+                    [setting.key, setting.value]
                 );
             }
         }
-        console.log('✓ 默认设置初始化完成');
         
-        console.log('数据库初始化完成！');
+        console.log('已插入默认设置');
     } catch (error) {
-        console.error('数据库初始化失败:', error);
-        throw error;
-    } finally {
-        connection.release();
+        console.error('插入默认设置失败:', error);
     }
 };

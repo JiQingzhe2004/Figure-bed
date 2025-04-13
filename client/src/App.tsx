@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Header from './components/layout/Header';
+import { getApiBaseUrl, isLocalEnvironment, isMobileDevice } from './utils/apiUtils';
 
 // 页面组件
 import HomePage from './pages/HomePage';
@@ -26,6 +27,15 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminRoute from './components/auth/AdminRoute';
 
 function App() {
+  useEffect(() => {
+    // 在应用启动时显示API配置信息
+    console.info('====== 应用配置信息 =======');
+    console.info('API 地址:', getApiBaseUrl());
+    console.info('环境:', isLocalEnvironment() ? '本地访问' : '远程访问');
+    console.info('设备:', isMobileDevice() ? '移动设备' : '桌面设备');
+    console.info('===========================');
+  }, []);
+
   return (
     <ThemeProvider>
       <AuthProvider>

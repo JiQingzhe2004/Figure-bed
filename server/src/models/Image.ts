@@ -1,8 +1,8 @@
 import pool from '../config/db';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
-export interface Image {
-    id?: number;
+export interface Image extends RowDataPacket {
+    id: number;
     user_id: number;
     filename: string;
     original_name: string;
@@ -12,16 +12,19 @@ export interface Image {
     width?: number;
     height?: number;
     is_public: boolean;
-    created_at?: Date;
-    updated_at?: Date;
+    created_at: Date;
+    thumbnail_path?: string; // 添加缩略图路径
 }
 
 // 创建新图片
-export const createImage = async (image: Omit<Image, 'id' | 'created_at' | 'updated_at'>): Promise<number> => {
-    const { user_id, filename, original_name, file_path, file_size, file_type, width, height, is_public } = image;
+export const createImage = async (image: Omit<Image, 'id' | 'created_at'>): Promise<number> => {
+    const { user_id, filename, original_name, file_path, file_size, file_type, width, height, is_public, thumbnail_path } = image;
     const [result] = await pool.query<ResultSetHeader>(
-        'INSERT INTO images (user_id, filename, original_name, file_path, file_size, file_type, width, height, is_public) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [user_id, filename, original_name, file_path, file_size, file_type, width, height, is_public]
+        `INSERT INTO images 
+         (user_id, filename, original_name, file_path, file_size, file_type, 
+          width, height, is_public, thumbnail_path) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [user_id, filename, original_name, file_path, file_size, file_type, width, height, is_public, thumbnail_path]
     );
     return result.insertId;
 };

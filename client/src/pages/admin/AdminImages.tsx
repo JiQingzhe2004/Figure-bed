@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { getAllImages, deleteImageAdmin } from '../../services/adminService';
 import { ImageData } from '../../types/image';
+import { fixImageUrl } from '../../utils/imageUtils';
+import AdminImageCard from '../../components/admin/ImageCard';
+import { Link } from 'react-router-dom';
 
 const AdminImages: React.FC = () => {
   const [images, setImages] = useState<ImageData[]>([]);
@@ -9,6 +12,7 @@ const AdminImages: React.FC = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
 
   const fetchImages = async () => {
     try {
@@ -42,6 +46,31 @@ const AdminImages: React.FC = () => {
     }
   };
 
+  const renderImages = () => {
+    return images.map(image => (
+      <div key={image.id} className="relative group">
+        <div className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow">
+          <Link to={`/image/${image.id}`}>
+            <img 
+              src={fixImageUrl(image.thumbnail_url || image.url)} 
+              alt={image.original_name}
+              className="w-full h-40 object-cover rounded-lg"
+              loading="lazy"
+              onError={(e) => {
+                const img = e.target as HTMLImageElement;
+                if (!img.dataset.retried) {
+                  img.dataset.retried = "true";
+                  img.onerror = null;
+                  img.src = '/images/placeholder.png';
+                }
+              }}
+            />
+          </Link>
+        </div>
+      </div>
+    ));
+  };
+
   if (loading && images.length === 0) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -51,7 +80,7 @@ const AdminImages: React.FC = () => {
   }
 
   return (
-    <div>
+    <div className="p-6">
       <h1 className="text-2xl font-bold mb-6 dark:text-white">图片管理</h1>
       
       {error && (
@@ -98,9 +127,14 @@ const AdminImages: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="h-10 w-10 rounded bg-gray-100 dark:bg-gray-700 overflow-hidden">
                       <img 
-                        src={image.url} 
+                        src={fixImageUrl(image.url)} 
                         alt={image.original_name}
                         className="h-full w-full object-cover"
+                        onError={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          img.onerror = null;
+                          img.src = '/images/placeholder.png';
+                        }}
                       />
                     </div>
                   </td>
@@ -196,6 +230,37 @@ const AdminImages: React.FC = () => {
           </div>
         )}
       </div>
+
+      {selectedImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h3 className="text-xl font-semibold">{selectedImage.original_name}</h3>
+              <button onClick={() => setSelectedImage(null)}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
+              <img
+                src={fixImageUrl(selectedImage.url)}
+                alt={selectedImage.original_name}
+                className="h-full w-full object-contain"
+                onError={(e) => {
+                  const img = e.target as HTMLImageElement;
+                  if (!img.dataset.retried) {
+                    img.dataset.retried = "true";
+                    img.onerror = null;
+                    img.src = '/images/placeholder.png';
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

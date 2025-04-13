@@ -1,88 +1,63 @@
-import express from 'express';
-import { uploadImage, getUserImages, getPublicImages, 
-         deleteImage, toggleImagePublicStatus, getImageById } from '../controllers/imageController';
-import { authenticateToken, optionalAuth } from '../middleware/authMiddleware';
+import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import crypto from 'crypto';
-import { sanitizeFileName } from '../utils/fileHelpers';
+import { authenticateToken } from '../middleware/auth';
+import * as imageController from '../controllers/imageController';
 
-const router = express.Router();
+const router = Router();
 
-// 确保上传目录存在，使用绝对路径
+// 确保上传目录存在
 const uploadDir = path.resolve(__dirname, '../../uploads');
-console.log('上传目录路径:', uploadDir);
-
-// 确保目录存在
 if (!fs.existsSync(uploadDir)) {
-    console.log('创建上传目录...');
-    try {
-        fs.mkdirSync(uploadDir, { recursive: true });
-        console.log('上传目录创建成功');
-    } catch (err) {
-        console.error('创建上传目录失败:', err);
-    }
+    fs.mkdirSync(uploadDir, { recursive: true });
+    console.log('创建uploads目录:', uploadDir);
 }
 
-// 配置Multer存储
+// 配置 multer 存储
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        try {
-            // 生成唯一文件名，避开文件名编码问题
-            const uniqueSuffix = crypto.randomBytes(8).toString('hex') + '-' + Date.now();
-            const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-            const filename = uniqueSuffix + ext;
-            
-            console.log('生成安全文件名:', filename, '原始名称:', file.originalname);
-            cb(null, filename);
-        } catch (error) {
-            console.error('文件名处理出错:', error);
-            // 回退到安全的文件名方案
-            cb(null, `file-${Date.now()}.jpg`);
+        // 使用随机字符串+时间戳作为文件名，避免冲突
+        const uniquePrefix = Math.random().toString(36).substring(2, 15);
+        cb(null, `${uniquePrefix}-${Date.now()}${path.extname(file.originalname)}`);
+    }
+});
+
+// 配置 multer 上传大小限制和文件过滤
+const upload = multer({
+    storage,
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB
+    },
+    fileFilter: (req, file, cb) => {
+        // 仅接受图片文件
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('只允许上传图片文件'));
         }
     }
 });
 
-// 文件过滤器
-const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-    // 只接受图片文件
-    if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
-    } else {
-        cb(null, false);
-        cb(new Error('只能上传图片文件'));
-    }
-};
-
-// 创建Multer实例
-const upload = multer({ 
-    storage,
-    fileFilter,
-    limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB限制
-    }
-});
-
-// 上传图片
-router.post('/upload', authenticateToken, upload.single('image'), uploadImage);
+// 图片上传路由 - 确保使用了正确的中间件链
+router.post('/upload', authenticateToken, upload.single('image'), imageController.uploadImage);
 
 // 获取用户自己的图片
-router.get('/my-images', authenticateToken, getUserImages);
+router.get('/my-images', authenticateToken, imageController.getUserImages);
 
-// 获取所有公开图片（不需要登录也可以查看）
-router.get('/public', optionalAuth, getPublicImages);
+// 获取公开图片
+router.get('/public', imageController.getPublicImages);
 
 // 获取单张图片
-router.get('/:id', optionalAuth, getImageById);
+router.get('/:id', imageController.getImageById);
 
-// 删除图片（需要验证所有权）
-router.delete('/:id', authenticateToken, deleteImage);
+// 删除图片
+router.delete('/:id', authenticateToken, imageController.deleteImage);
 
 // 切换图片公开状态
-router.patch('/:id/toggle-public', authenticateToken, toggleImagePublicStatus);
+router.patch('/:id/toggle-public', authenticateToken, imageController.toggleImagePublicStatus);
 
 export default router;

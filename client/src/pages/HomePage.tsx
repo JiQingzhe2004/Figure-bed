@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { getPublicImages } from '../services/imageService';
 import { getSettings } from '../services/settingService';
 import { ImageData } from '../types/image';
+import Masonry from 'react-masonry-css';
+import { fixImageUrl } from '../utils/imageUtils';
 
 const HomePage: React.FC = () => {
   const [images, setImages] = useState<ImageData[]>([]);
@@ -55,6 +57,15 @@ const HomePage: React.FC = () => {
     }
   };
 
+  // 瀑布流的断点设置
+  const breakpointColumnsObj = {
+    default: 4, // 默认4列
+    1280: 3,    // 在1280px以下是3列
+    1024: 3,    // 在1024px以下是3列
+    768: 2,     // 在768px以下是2列
+    640: 1      // 在640px以下是1列
+  };
+
   return (
     <div className="container mx-auto px-4">
       {/* 首页横幅 */}
@@ -80,17 +91,35 @@ const HomePage: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {/* 使用Masonry组件替代原有grid */}
+      <Masonry
+        breakpointCols={breakpointColumnsObj}
+        className="flex w-auto -ml-4" // 负外边距补偿子元素的间距
+        columnClassName="pl-4 bg-clip-padding" // 列的左内边距
+      >
         {images.map(image => (
-          <div key={image.id} className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
+          <div key={image.id} className="mb-4 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
             <Link to={`/image/${image.id}`}>
-              <div className="aspect-w-16 aspect-h-9">
+              <div className="relative">
                 <img
-                  src={image.url}
+                  src={fixImageUrl(image.thumbnail_url || image.url)}
                   alt={image.original_name}
-                  className="object-cover w-full h-full"
+                  className="w-full h-auto" // 高度自适应，保持原始比例
                   loading="lazy"
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    if (!img.dataset.retried) {
+                      img.dataset.retried = "true";
+                      img.src = '/images/placeholder.png';
+                    }
+                  }}
                 />
+                {/* 可选：添加图片尺寸信息悬浮层 */}
+                {image.width && image.height && (
+                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                    {image.width} × {image.height}
+                  </div>
+                )}
               </div>
               <div className="p-4">
                 <h3 className="text-lg font-medium truncate">{image.original_name}</h3>
@@ -101,7 +130,7 @@ const HomePage: React.FC = () => {
             </Link>
           </div>
         ))}
-      </div>
+      </Masonry>
 
       {/* 加载更多按钮 */}
       {images.length > 0 && (

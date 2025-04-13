@@ -1,79 +1,78 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { UserInfo, LoginData, RegisterData, AuthResponse } from '../types/auth';
 import { loginUser, registerUser, getCurrentUser, logoutUser } from '../services/authService';
-import { RegisterData, LoginData, UserInfo } from '../types/auth';
-import apiClient from '../services/api';
+import axiosInstance from '../services/axiosInstance';
 
+// 认证上下文类型定义
 interface AuthContextType {
   user: UserInfo | null;
-  token: string | null;
-  isAuthenticated: boolean;
+  isLoggedIn: boolean;
+  isAuthenticated: boolean; // 添加别名属性，与isLoggedIn保持一致
   isAdmin: boolean;
   loading: boolean;
-  login: (credentials: LoginData) => Promise<void>;
+  login: (credentials: LoginData) => Promise<AuthResponse>; // 修改返回类型为Promise<AuthResponse>而非void
   register: (userData: RegisterData) => Promise<void>;
   logout: () => void;
   error: string | null;
 }
 
+// 创建认证上下文
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+// 认证提供者组件
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserInfo | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('authToken'));
+  const [authToken, setAuthToken] = useState<string | null>(localStorage.getItem('authToken'));
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  const isAuthenticated = !!token;
-  const isAdmin = user?.role === 'admin';
-
-  // 初始化时检查已存储的token和用户信息
   useEffect(() => {
-    const initAuth = async () => {
-      const storedToken = localStorage.getItem('authToken');
+    const loadUser = async () => {
+      const token = localStorage.getItem('authToken');
       
-      if (storedToken) {
-        console.log('找到存储的token，尝试恢复登录状态');
-        try {
-          // 设置请求头
-          apiClient.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-          const userData = await getCurrentUser();
-          console.log('成功获取用户信息，用户已登录');
-          setUser(userData);
-          setToken(storedToken);
-        } catch (error: any) {
-          console.error('自动登录失败:', error);
-          // 清除无效的token
-          localStorage.removeItem('authToken');
-          delete apiClient.defaults.headers.common['Authorization'];
-          setToken(null);
-        }
-      } else {
+      if (!token) {
         console.log('没有找到存储的token');
+        setLoading(false);
+        return;
       }
       
-      setLoading(false);
+      try {
+        // 在头部设置令牌
+        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        // 验证令牌并获取用户信息
+        const userData = await getCurrentUser();
+        setUser(userData);
+      } catch (error) {
+        console.error('加载用户信息失败');
+        localStorage.removeItem('authToken');
+        delete axiosInstance.defaults.headers.common['Authorization'];
+      } finally {
+        setLoading(false);
+      }
     };
-
-    initAuth();
+    
+    loadUser();
   }, []);
 
-  const login = async (credentials: LoginData) => {
+  // 登录函数
+  const login = async (credentials: LoginData): Promise<AuthResponse> => { // 确保返回类型正确
     try {
-      setLoading(true);
-      const { user: userData, token: authToken } = await loginUser(credentials);
-      setUser(userData);
-      setToken(authToken);
-      setError(null);
-      console.log('登录成功，用户信息已保存');
+      setAuthError(null);
+      const response = await loginUser(credentials);
+      
+      // 存储用户信息和令牌
+      setUser(response.user);
+      localStorage.setItem('authToken', response.token);
+      
+      // 设置请求头的授权信息
+      axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${response.token}`;
+      
+      return response; // 返回完整的响应对象
     } catch (error: any) {
-      setError(error.message || '登录失败，请稍后再试');
       console.error('登录错误:', error);
-    } finally {
-      setLoading(false);
+      setAuthError(error.message);
+      throw error;
     }
   };
 
@@ -82,10 +81,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       const { user: newUser, token: authToken } = await registerUser(userData);
       setUser(newUser);
-      setToken(authToken);
-      setError(null);
+      setAuthToken(authToken);
+      setAuthError(null);
     } catch (error: any) {
-      setError(error.message || '注册失败，请稍后再试');
+      setAuthError(error.message || '注册失败，请稍后再试');
       console.error('注册错误:', error);
     } finally {
       setLoading(false);
@@ -95,32 +94,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     logoutUser();
     setUser(null);
-    setToken(null);
+    setAuthToken(null);
+  };
+
+  const contextValue: AuthContextType = {
+    user,
+    isLoggedIn: !!user,
+    isAuthenticated: !!user, // 添加别名属性，与isLoggedIn保持一致
+    isAdmin: !!user && user.role === 'admin',
+    loading,
+    login,
+    register,
+    logout,
+    error: authError
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        token,
-        isAuthenticated,
-        isAdmin,
-        loading,
-        login,
-        register,
-        logout,
-        error
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = (): AuthContextType => {
+// 自定义Hook，方便使用认证上下文
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  if (context === undefined) {
+    throw new Error('useAuth必须在AuthProvider内使用');
   }
   return context;
 };

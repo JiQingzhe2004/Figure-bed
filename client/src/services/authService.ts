@@ -1,12 +1,12 @@
-import apiClient from './api';
+import axiosInstance from './axiosInstance';
 import { RegisterData, LoginData, AuthResponse, UserInfo } from '../types/auth';
 
 export const registerUser = async (userData: RegisterData): Promise<AuthResponse> => {
     try {
-        const response = await apiClient.post<AuthResponse>('/auth/register', userData);
+        const response = await axiosInstance.post<AuthResponse>('/api/auth/register', userData);
         if (response.data.token) {
             localStorage.setItem('authToken', response.data.token);
-            apiClient.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+            axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
         }
         return response.data;
     } catch (error: any) {
@@ -17,10 +17,10 @@ export const registerUser = async (userData: RegisterData): Promise<AuthResponse
 
 export const loginUser = async (credentials: LoginData): Promise<AuthResponse> => {
     try {
-        const response = await apiClient.post<AuthResponse>('/auth/login', credentials);
+        const response = await axiosInstance.post<AuthResponse>('/api/auth/login', credentials);
         if (response.data.token) {
             localStorage.setItem('authToken', response.data.token);
-            apiClient.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+            axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
         }
         return response.data;
     } catch (error: any) {
@@ -37,8 +37,8 @@ export const getCurrentUser = async (): Promise<UserInfo> => {
             throw new Error('未找到认证令牌');
         }
         
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        const response = await apiClient.get<{ user: UserInfo }>('/auth/me');
+        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        const response = await axiosInstance.get<{ user: UserInfo }>('/api/auth/me');
         console.log('获取用户信息成功:', response.data);
         return response.data.user;
     } catch (error: any) {
@@ -49,5 +49,5 @@ export const getCurrentUser = async (): Promise<UserInfo> => {
 
 export const logoutUser = (): void => {
     localStorage.removeItem('authToken');
-    delete apiClient.defaults.headers.common['Authorization'];
+    delete axiosInstance.defaults.headers.common['Authorization'];
 };

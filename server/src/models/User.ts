@@ -2,13 +2,14 @@ import pool from '../config/db';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 // Define the structure of a User object (optional but good practice)
-export interface User {
-    id?: number;
+export interface User extends RowDataPacket {
+    id: number;
     username: string;
     email: string;
-    password_hash: string; // Store hashed password
-    role?: string; // 用户角色: 'user' 或 'admin'
-    created_at?: Date;
+    password: string;
+    role: string; // 用户角色: 'user' 或 'admin'
+    created_at: Date;
+    last_login: Date | null;
 }
 
 // Function to find a user by email
@@ -24,40 +25,46 @@ export const findUserByEmail = async (email: string): Promise<User | null> => {
             id: userRow.id,
             username: userRow.username,
             email: userRow.email,
-            password_hash: userRow.password_hash,
+            password: userRow.password,
             role: userRow.role,
             created_at: userRow.created_at,
+            last_login: userRow.last_login,
         };
     }
     return null;
 };
 
-// Function to find a user by username
+// 更详细地检查用户查询结果
 export const findUserByUsername = async (username: string): Promise<User | null> => {
+    console.log(`查询用户: ${username}`);
     const [rows] = await pool.query<RowDataPacket[]>(
         'SELECT * FROM users WHERE username = ?',
         [username]
     );
-    if (rows.length > 0) {
-        const userRow = rows[0];
-        return {
-            id: userRow.id,
-            username: userRow.username,
-            email: userRow.email,
-            password_hash: userRow.password_hash,
-            role: userRow.role,
-            created_at: userRow.created_at,
-        };
+    
+    if (rows.length === 0) {
+        console.log(`未找到用户: ${username}`);
+        return null;
     }
-    return null;
+    
+    const userRow = rows[0];
+    console.log(`数据库返回用户: ID=${userRow.id}, 用户名=${userRow.username}`);
+    
+    // 检查关键字段是否存在
+    if (!userRow.password) {
+        console.error(`用户 ${username} 的密码字段为空`);
+    }
+    
+    // 直接返回数据库行，确保所有字段都被传递
+    return userRow as User;
 };
 
 // Function to create a new user
-export const createUser = async (user: Omit<User, 'id' | 'created_at'>): Promise<number> => {
-    const { username, email, password_hash, role = 'user' } = user;
+export const createUser = async (user: Omit<User, 'id' | 'created_at' | 'last_login'>): Promise<number> => {
+    const { username, email, password, role = 'user' } = user;
     const [result] = await pool.query<ResultSetHeader>(
-        'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)',
-        [username, email, password_hash, role]
+        'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
+        [username, email, password, role]
     );
     return result.insertId; // Return the ID of the newly created user
 };
@@ -74,9 +81,10 @@ export const findUserById = async (id: number): Promise<User | null> => {
             id: userRow.id,
             username: userRow.username,
             email: userRow.email,
-            password_hash: userRow.password_hash,
+            password: userRow.password,
             role: userRow.role,
             created_at: userRow.created_at,
+            last_login: userRow.last_login,
         };
     }
     return null;
@@ -89,4 +97,18 @@ export const updateUserRole = async (id: number, role: string): Promise<boolean>
         [role, id]
     );
     return result.affectedRows > 0;
+};
+
+// 更新最后登录时间
+export const updateLastLogin = async (userId: number): Promise<boolean> => {
+    try {
+        const [result] = await pool.query<ResultSetHeader>(
+            'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
+            [userId]
+        );
+        return result.affectedRows > 0;
+    } catch (error) {
+        console.error('更新最后登录时间失败:', error);
+        return false;
+    }
 };

@@ -1,24 +1,42 @@
 /**
- * 处理文件名，确保它们可以安全存储在数据库中
+ * 文件处理辅助函数
  */
-export const sanitizeFileName = (originalName: string): string => {
+
+/**
+ * 清理并规范化文件名，处理编码问题
+ * @param fileName 原始文件名
+ * @returns 清理后的文件名
+ */
+export const sanitizeFileName = (fileName: string): string => {
   try {
-    // 解码URL编码的文件名
-    const decodedName = decodeURIComponent(originalName);
+    // 尝试处理中文或其他特殊字符编码问题
+    const decodedFileName = decodeURIComponent(escape(fileName));
     
-    // 第一种方法：替换特殊字符
-    return decodedName
-      .replace(/[^\w\s\u4e00-\u9fa5\u0800-\u4e00.-]/g, '')  // 保留字母、数字、中文、日文和一些特定字符
-      .trim()
-      .substring(0, 200);  // 限制长度
+    // 移除不安全的文件名字符
+    let sanitized = decodedFileName
+      .replace(/[/\\?%*:|"<>]/g, '-') // 替换文件系统不允许的字符
+      .trim();
+    
+    // 如果处理后文件名为空，使用时间戳作为文件名
+    if (!sanitized || sanitized === '.') {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const extension = fileName.includes('.') 
+        ? fileName.substring(fileName.lastIndexOf('.')) 
+        : '';
       
-    // 另一种方法：完全重命名
-    // const ext = path.extname(originalName);
-    // const timestamp = new Date().getTime();
-    // return `file_${timestamp}${ext}`;
+      sanitized = `image-${timestamp}${extension}`;
+    }
+    
+    console.log('清理文件名:', fileName, '=>', sanitized);
+    return sanitized;
   } catch (error) {
-    // 如果解码失败，返回一个安全的替代名称
-    const timestamp = new Date().getTime();
-    return `file_${timestamp}`;
+    console.error('文件名清理错误:', error);
+    // 出错时，使用时间戳创建安全的文件名
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const extension = fileName.includes('.') 
+      ? fileName.substring(fileName.lastIndexOf('.')) 
+      : '';
+    
+    return `image-${timestamp}${extension}`;
   }
 };

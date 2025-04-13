@@ -1,10 +1,11 @@
-import apiClient from './api';
+import axiosInstance from './axiosInstance';
 import { ImageListResponse } from '../types/image';
 
 // 获取仪表盘统计数据
 export const getDashboardStats = async () => {
   try {
-    const response = await apiClient.get('/admin/stats');
+    // 修正API路径，添加/api前缀
+    const response = await axiosInstance.get('/api/admin/stats');
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || '获取统计数据失败');
@@ -14,7 +15,8 @@ export const getDashboardStats = async () => {
 // 获取所有用户
 export const getAllUsers = async (page: number = 1, perPage: number = 10) => {
   try {
-    const response = await apiClient.get(`/admin/users?page=${page}&per_page=${perPage}`);
+    // 修正API路径，添加/api前缀
+    const response = await axiosInstance.get(`/api/admin/users?page=${page}&per_page=${perPage}`);
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || '获取用户数据失败');
@@ -24,7 +26,8 @@ export const getAllUsers = async (page: number = 1, perPage: number = 10) => {
 // 获取单个用户
 export const getUserById = async (userId: number) => {
   try {
-    const response = await apiClient.get(`/admin/users/${userId}`);
+    // 修正API路径，添加/api前缀
+    const response = await axiosInstance.get(`/api/admin/users/${userId}`);
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || '获取用户数据失败');
@@ -34,7 +37,8 @@ export const getUserById = async (userId: number) => {
 // 更新用户角色
 export const updateUserRole = async (userId: number, role: string) => {
   try {
-    const response = await apiClient.put(`/admin/users/${userId}/role`, { role });
+    // 修正API路径，添加/api前缀
+    const response = await axiosInstance.put(`/api/admin/users/${userId}/role`, { role });
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || '更新用户角色失败');
@@ -44,7 +48,8 @@ export const updateUserRole = async (userId: number, role: string) => {
 // 删除用户
 export const deleteUser = async (userId: number) => {
   try {
-    const response = await apiClient.delete(`/admin/users/${userId}`);
+    // 修正API路径，添加/api前缀
+    const response = await axiosInstance.delete(`/api/admin/users/${userId}`);
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || '删除用户失败');
@@ -54,7 +59,8 @@ export const deleteUser = async (userId: number) => {
 // 获取所有图片（管理员）
 export const getAllImages = async (page: number = 1, perPage: number = 12): Promise<ImageListResponse> => {
   try {
-    const response = await apiClient.get<ImageListResponse>(`/admin/images?page=${page}&per_page=${perPage}`);
+    // 修正API路径，添加/api前缀
+    const response = await axiosInstance.get<ImageListResponse>(`/api/admin/images?page=${page}&per_page=${perPage}`);
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || '获取图片数据失败');
@@ -64,7 +70,8 @@ export const getAllImages = async (page: number = 1, perPage: number = 12): Prom
 // 删除图片（管理员）
 export const deleteImageAdmin = async (imageId: number) => {
   try {
-    const response = await apiClient.delete(`/admin/images/${imageId}`);
+    // 修正API路径，添加/api前缀
+    const response = await axiosInstance.delete(`/api/admin/images/${imageId}`);
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.message || '删除图片失败');
