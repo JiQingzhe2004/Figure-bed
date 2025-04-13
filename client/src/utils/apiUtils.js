@@ -63,20 +63,8 @@ export const cleanupUrl = (url) => {
 };
 
 /**
- * 记录API配置信息
+ * 记录API配置信息 - 空函数，不再输出日志
  */
 export const logApiConfig = () => {
-  const baseUrl = getApiBaseUrl();
-  console.log(`API配置 - 基础URL: ${baseUrl}`);
-  console.log(`本地访问: ${isLocalEnvironment() ? '是' : '否'}`);
-  console.log(`移动设备: ${isMobileDevice() ? '是' : '否'}`);
-  console.log(`自动选择API: ${process.env.REACT_APP_AUTO_SELECT_API === 'true' ? '启用' : '禁用'}`);
-  
-  // 添加URL格式检查
-  if (baseUrl.includes('/:')) {
-    console.warn('警告: API URL格式错误，包含"/:". 请检查环境变量配置');
-    console.log('尝试自动修复URL格式...');
-    const fixedUrl = cleanupUrl(baseUrl);
-    console.log(`修复后的URL: ${fixedUrl}`);
-  }
+  // 已移除所有控制台输出
 };

@@ -83,7 +83,7 @@ const UserImagePage: React.FC = () => {
                 <Link to={`/image/${image.id}`}>
                   <div className="aspect-w-16 aspect-h-9 bg-gray-200 dark:bg-gray-700">
                     <img 
-                      src={image.url} 
+                      src={image.thumbnail_url || image.url} 
                       alt={image.original_name} 
                       className="object-cover w-full h-full"
                       loading="lazy"

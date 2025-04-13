@@ -24,13 +24,4 @@ const API_CONFIG = {
   }
 };
 
-// 开发环境打印配置信息
-if (process.env.NODE_ENV === 'development') {
-  console.log('API配置:', {
-    baseURL: API_CONFIG.baseURL,
-    timeout: API_CONFIG.timeout,
-    withCredentials: API_CONFIG.withCredentials
-  });
-}
-
 export default API_CONFIG;
