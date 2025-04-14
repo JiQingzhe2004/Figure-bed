@@ -29,3 +29,13 @@ export const updatePassword = async (currentPassword: string, newPassword: strin
     throw new Error(error.response?.data?.message || '密码更新失败');
   }
 };
+
+// 获取用户统计数据
+export const getUserStats = async () => {
+  try {
+    const response = await axiosInstance.get('/api/user/stats');
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || '获取用户统计数据失败');
+  }
+};

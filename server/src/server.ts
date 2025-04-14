@@ -11,6 +11,8 @@ import authRoutes from './routes/authRoutes';
 import imageRoutes from './routes/imageRoutes'; 
 import settingRoutes from './routes/settingRoutes';
 import adminRoutes from './routes/adminRoutes';
+import userRoutes from './routes/userRoutes'; // 添加用户路由
+import statsRoutes from './routes/statsRoutes'; // 添加统计路由
 
 // 加载环境变量
 dotenv.config();
@@ -58,6 +60,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/user', userRoutes); // 添加用户路由
+app.use('/api/stats', statsRoutes); // 添加统计路由
 
 // 全局错误处理中间件
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
