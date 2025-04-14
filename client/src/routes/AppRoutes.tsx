@@ -8,6 +8,8 @@ import UploadPage from '../pages/UploadPage';
 import ProfilePage from '../pages/ProfilePage'; 
 import UserImagePage from '../pages/UserImagePage'; // 改为单数形式
 import ImageDetailPage from '../pages/ImageDetailPage';
+import PrivacyPolicyPage from '../pages/PrivacyPolicyPage';
+import TermsOfServicePage from '../pages/TermsOfServicePage';
 import AdminLayout from '../pages/admin/AdminLayout';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import AdminUsers from '../pages/admin/AdminUsers';
@@ -26,6 +28,8 @@ const AppRoutes: React.FC = () => {
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="image/:id" element={<ImageDetailPage />} />
+        <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="terms-of-service" element={<TermsOfServicePage />} />
 
         {/* 需要登录的路由 */}
         <Route path="upload" element={

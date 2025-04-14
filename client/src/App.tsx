@@ -4,6 +4,8 @@ import { AuthProvider } from './context/AuthContext';
 import AppRoutes from './routes/AppRoutes';
 import { getSettings } from './services/settingService';
 import DynamicTitle from './components/common/DynamicTitle';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsOfServicePage from './pages/TermsOfServicePage';
 
 function App() {
   const [siteMetadata, setSiteMetadata] = useState({
@@ -38,7 +40,8 @@ function App() {
       />
       <ThemeProvider>
         <AuthProvider>
-          <AppRoutes />
+          <AppRoutes>
+          </AppRoutes>
         </AuthProvider>
       </ThemeProvider>
     </>

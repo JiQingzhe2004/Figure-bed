@@ -149,7 +149,10 @@ const insertDefaultSettings = async () => {
             { key: 'allow_register', value: 'true' },
             { key: 'max_file_size', value: '10' },
             { key: 'allowed_file_types', value: 'image/jpeg,image/png,image/gif,image/webp' },
-            { key: 'default_theme', value: 'system' }
+            { key: 'default_theme', value: 'system' },
+            // 添加隐私政策和使用条款默认内容
+            { key: 'privacy_policy', value: '# 隐私政策\n\n这是默认的隐私政策内容，请管理员在后台修改。\n\n## 信息收集\n\n我们只收集必要的用户信息用于账户管理和服务提供。\n\n## 数据安全\n\n我们采取合理措施保护您的数据安全。' },
+            { key: 'terms_of_service', value: '# 使用条款\n\n这是默认的使用条款内容，请管理员在后台修改。\n\n## 服务描述\n\n本网站提供图片上传和管理服务。\n\n## 用户责任\n\n用户须对上传的内容负责，不得上传违反法律法规的图片。' }
         ];
         
         for (const setting of defaultSettings) {

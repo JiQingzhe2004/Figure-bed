@@ -421,13 +421,13 @@ const Header: React.FC = () => {
                 © {new Date().getFullYear()} {siteName} 
               </div>
               <div className="flex justify-center space-x-4 mt-2">
-                <a href="#" className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors">
+                <Link to="/privacy-policy" className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors">
                   隐私政策
-                </a>
+                </Link>
                 <span className="text-gray-300 dark:text-gray-600">|</span>
-                <a href="#" className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors">
+                <Link to="/terms-of-service" className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors">
                   使用条款
-                </a>
+                </Link>
               </div>
             </div>
           </div>
