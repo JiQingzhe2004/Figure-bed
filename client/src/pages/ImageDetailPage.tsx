@@ -11,6 +11,7 @@ const ImageDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
   
@@ -53,26 +54,92 @@ const ImageDetailPage: React.FC = () => {
     
     try {
       const imageUrl = fixImageUrl(image.url);
+      
+      // 设置下载状态而不是全局加载状态
+      setDownloading(true);
+      
+      // 使用fetch获取图片数据
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error('下载图片失败，请稍后再试');
+      }
+      
+      // 将响应数据转换为blob
+      const blob = await response.blob();
+      
+      // 创建blob URL
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      // 创建下载链接
       const link = document.createElement('a');
-      link.href = imageUrl;
+      link.href = blobUrl;
       link.download = image.original_name || `image-${image.id}`;
+      
+      // 添加到DOM并触发点击
       document.body.appendChild(link);
       link.click();
+      
+      // 清理DOM和释放blob URL
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+      setDownloading(false);
     } catch (err: any) {
+      console.error('下载错误:', err);
       setError(err.message || '下载图片失败');
+      setDownloading(false);
     }
   };
   
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-      .then(() => {
+    // 检查现代剪贴板API是否可用
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      navigator.clipboard.writeText(text)
+        .then(() => {
+          setCopySuccess(true);
+          setTimeout(() => setCopySuccess(false), 2000);
+        })
+        .catch(() => {
+          // 如果API调用失败，尝试备用方法
+          fallbackCopyToClipboard(text);
+        });
+    } else {
+      // 如果现代API不可用，使用备用方法
+      fallbackCopyToClipboard(text);
+    }
+  };
+
+  // 备用复制方法，使用传统的document.execCommand
+  const fallbackCopyToClipboard = (text: string) => {
+    try {
+      // 创建临时textarea元素
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      
+      // 将元素设置为不可见
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      
+      // 选中并复制文本
+      textArea.focus();
+      textArea.select();
+      
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      if (successful) {
         setCopySuccess(true);
         setTimeout(() => setCopySuccess(false), 2000);
-      })
-      .catch(() => {
+      } else {
         setError('复制失败，请手动选择并复制');
-      });
+      }
+    } catch (err) {
+      setError('复制失败，请手动选择并复制');
+    }
   };
   
   const canEdit = user && image && (user.id === image.user_id || user.role === 'admin');
@@ -263,9 +330,17 @@ const ImageDetailPage: React.FC = () => {
           <div className="mt-6 flex justify-end space-x-4">
             <button 
               onClick={handleDownload}
-              className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded"
+              disabled={downloading}
+              className={`flex items-center justify-center ${downloading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white font-medium py-2 px-6 rounded`}
             >
-              下载原图
+              {downloading ? (
+                <>
+                  <span className="animate-spin inline-block h-4 w-4 border-t-2 border-b-2 border-white rounded-full mr-2"></span>
+                  下载中...
+                </>
+              ) : (
+                '下载原图'
+              )}
             </button>
             
             {canEdit && (
