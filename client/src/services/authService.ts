@@ -1,5 +1,6 @@
 import axiosInstance from './axiosInstance';
-import { RegisterData, LoginData, AuthResponse, User } from '../types/auth';
+import { RegisterData, LoginData, AuthResponse } from '../types/auth';
+import { User } from '../types/user';
 
 export const registerUser = async (userData: RegisterData): Promise<AuthResponse> => {
     try {

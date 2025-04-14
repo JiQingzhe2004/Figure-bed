@@ -25,14 +25,6 @@ const ProfilePage: React.FC = () => {
     document.documentElement.classList.toggle('dark', savedTheme === 'dark');
   }, []);
 
-  // 切换主题
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -122,7 +114,7 @@ const ProfilePage: React.FC = () => {
       if (user && updateCurrentUser) {
         updateCurrentUser({
           ...user,
-          avatar_url: response.avatar_url
+          avatar_path: response.avatar_url // 使用avatar_path替代avatar_url
         });
       }
     } catch (err: any) {
@@ -139,12 +131,6 @@ const ProfilePage: React.FC = () => {
     <div className="max-w-3xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold dark:text-white">个人资料</h1>
-        <button
-          onClick={toggleTheme}
-          className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white"
-        >
-          {theme === 'light' ? '🌙' : '☀️'}
-        </button>
       </div>
       
       {/* 用户信息卡片 */}
@@ -156,9 +142,9 @@ const ProfilePage: React.FC = () => {
               onClick={handleAvatarClick} 
               className="relative w-24 h-24 rounded-full overflow-hidden cursor-pointer group"
             >
-              {user?.avatar_url ? (
+              {(user?.avatar_path || user?.avatar_url) ? (
                 <img 
-                  src={user.avatar_url} 
+                  src={user.avatar_path || user.avatar_url} 
                   alt={user.username} 
                   className="w-full h-full object-cover"
                   onError={(e) => {

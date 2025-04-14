@@ -5,6 +5,7 @@ import { getSettings } from '../services/settingService';
 import { ImageData } from '../types/image';
 import Masonry from 'react-masonry-css';
 import LazyImage from '../components/image/LazyImage';
+import DynamicTitle from '../components/common/DynamicTitle';
 
 const HomePage: React.FC = () => {
   const [images, setImages] = useState<ImageData[]>([]);
@@ -84,6 +85,11 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4">
+      <DynamicTitle 
+        title={settings.site_name}
+        description={settings.site_description}
+      />
+      
       {/* 首页横幅 */}
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg shadow-lg p-8 mb-10">
         <h1 className="text-3xl md:text-4xl font-bold mb-4">{settings.site_name}</h1>

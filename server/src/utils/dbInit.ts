@@ -144,9 +144,12 @@ const insertDefaultSettings = async () => {
         const defaultSettings = [
             { key: 'site_name', value: '图床应用' },
             { key: 'site_description', value: '简单好用的图片管理工具' },
-            { key: 'allow_registration', value: 'true' },
-            { key: 'max_upload_size', value: '10485760' },  // 10MB
-            { key: 'allowed_file_types', value: 'image/jpeg,image/png,image/gif,image/webp' }
+            { key: 'site_logo', value: '' },  // 添加网站Logo URL默认值
+            { key: 'site_keywords', value: '图片,上传,图床,照片,分享' }, 
+            { key: 'allow_register', value: 'true' },
+            { key: 'max_file_size', value: '10' },
+            { key: 'allowed_file_types', value: 'image/jpeg,image/png,image/gif,image/webp' },
+            { key: 'default_theme', value: 'system' }
         ];
         
         for (const setting of defaultSettings) {
@@ -160,6 +163,55 @@ const insertDefaultSettings = async () => {
                 await pool.query(
                     'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)',
                     [setting.key, setting.value]
+                );
+            }
+        }
+        
+        // 处理旧版本数据迁移 - 如果存在旧键名的值，迁移到新键名
+        const [oldSetting] = await pool.query(
+            'SELECT * FROM settings WHERE setting_key = ?',
+            ['max_upload_size']
+        );
+        
+        if ((oldSetting as any[]).length > 0) {
+            // 存在旧设置，转换为MB并迁移到新键名
+            const oldValue = (oldSetting as any[])[0].setting_value;
+            const mbValue = Math.round(parseInt(oldValue) / (1024 * 1024)).toString();
+            
+            // 检查新键名是否已存在
+            const [newSetting] = await pool.query(
+                'SELECT * FROM settings WHERE setting_key = ?',
+                ['max_file_size']
+            );
+            
+            if ((newSetting as any[]).length === 0) {
+                await pool.query(
+                    'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)',
+                    ['max_file_size', mbValue]
+                );
+            }
+        }
+        
+        // 处理旧版本数据迁移 - 如果存在旧allow_registration键名的值，迁移到新键名allow_register
+        const [oldRegSetting] = await pool.query(
+            'SELECT * FROM settings WHERE setting_key = ?',
+            ['allow_registration']
+        );
+        
+        if ((oldRegSetting as any[]).length > 0) {
+            // 存在旧设置，迁移到新键名
+            const oldValue = (oldRegSetting as any[])[0].setting_value;
+            
+            // 检查新键名是否已存在
+            const [newRegSetting] = await pool.query(
+                'SELECT * FROM settings WHERE setting_key = ?',
+                ['allow_register']
+            );
+            
+            if ((newRegSetting as any[]).length === 0) {
+                await pool.query(
+                    'INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)',
+                    ['allow_register', oldValue]
                 );
             }
         }

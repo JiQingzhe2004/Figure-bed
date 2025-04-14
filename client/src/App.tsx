@@ -1,79 +1,47 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import React, { useEffect, useState } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
-import Header from './components/layout/Header';
-
-// 页面组件
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import UploadPage from './pages/UploadPage';
-import UserImagePage from './pages/UserImagePage';
-import ProfilePage from './pages/ProfilePage';
-import ImageDetailPage from './pages/ImageDetailPage';
-import NotFoundPage from './pages/NotFoundPage';
-
-// 管理员页面
-import AdminLayout from './pages/admin/AdminLayout';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminUsers from './pages/admin/AdminUsers';
-import AdminImages from './pages/admin/AdminImages';
-import AdminSettings from './pages/admin/AdminSettings';
-
-// 认证保护路由
-import ProtectedRoute from './components/auth/ProtectedRoute';
-import AdminRoute from './components/auth/AdminRoute';
+import { AuthProvider } from './context/AuthContext';
+import AppRoutes from './routes/AppRoutes';
+import { getSettings } from './services/settingService';
+import DynamicTitle from './components/common/DynamicTitle';
 
 function App() {
+  const [siteMetadata, setSiteMetadata] = useState({
+    title: '图床应用',
+    description: '简单好用的图片管理工具',
+    keywords: '图片,上传,图床,照片,分享'
+  });
+  
+  useEffect(() => {
+    const fetchSiteMetadata = async () => {
+      try {
+        const { settings } = await getSettings();
+        setSiteMetadata({
+          title: settings.site_name || '图床应用',
+          description: settings.site_description || '简单好用的图片管理工具',
+          keywords: settings.site_keywords || '图片,上传,图床,照片,分享'
+        });
+      } catch (error) {
+        console.error('获取网站元数据失败:', error);
+      }
+    };
+    
+    fetchSiteMetadata();
+  }, []);
+  
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
-          <Header />
-          <main className="container mx-auto py-6 px-4">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/image/:id" element={<ImageDetailPage />} />
-              
-              {/* 需要登录的路由 */}
-              <Route path="/upload" element={
-                <ProtectedRoute>
-                  <UploadPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/user/images" element={
-                <ProtectedRoute>
-                  <UserImagePage />
-                </ProtectedRoute>
-              } />
-              <Route path="/user/profile" element={
-                <ProtectedRoute>
-                  <ProfilePage />
-                </ProtectedRoute>
-              } />
-              
-              {/* 管理员路由 */}
-              <Route path="/admin" element={
-                <AdminRoute>
-                  <AdminLayout />
-                </AdminRoute>
-              }>
-                <Route index element={<Navigate to="/admin/dashboard" replace />} />
-                <Route path="dashboard" element={<AdminDashboard />} />
-                <Route path="users" element={<AdminUsers />} />
-                <Route path="images" element={<AdminImages />} />
-                <Route path="settings" element={<AdminSettings />} />
-              </Route>
-              
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </main>
-        </div>
-      </AuthProvider>
-    </ThemeProvider>
+    <>
+      <DynamicTitle 
+        title={siteMetadata.title}
+        description={siteMetadata.description}
+        keywords={siteMetadata.keywords}
+      />
+      <ThemeProvider>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </ThemeProvider>
+    </>
   );
 }
 

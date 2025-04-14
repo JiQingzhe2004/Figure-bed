@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, LoginData, RegisterData, AuthResponse } from '../types/auth';
+import { User } from '../types/user';
+import { LoginData, RegisterData, AuthResponse } from '../types/auth';
 import { loginUser, registerUser, getCurrentUser, logoutUser } from '../services/authService';
 import axiosInstance from '../services/axiosInstance';
 
 // 认证上下文类型定义
 interface AuthContextType {
   user: User | null;
-  isLoggedIn: boolean;
-  isAuthenticated: boolean; // 添加别名属性，与isLoggedIn保持一致
+  isAuthenticated: boolean;
+  isLoggedIn: boolean; // 添加别名属性，与isAuthenticated保持一致
   isAdmin: boolean;
   loading: boolean;
   login: (credentials: LoginData) => Promise<AuthResponse>; // 修改返回类型为Promise<AuthResponse>而非void
@@ -43,7 +44,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         // 验证令牌并获取用户信息
         const userData = await getCurrentUser();
-        setUser(userData);
+        // 确保userData符合User类型
+        const typedUser: User = userData as User;
+        setUser(typedUser);
       } catch (error) {
         console.error('加载用户信息失败');
         localStorage.removeItem('authToken');
@@ -63,7 +66,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const response = await loginUser(credentials);
       
       // 存储用户信息和令牌
-      setUser(response.user);
+      const typedUser: User = response.user as User;
+      setUser(typedUser);
       localStorage.setItem('authToken', response.token);
       
       // 设置请求头的授权信息
@@ -81,7 +85,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setLoading(true);
       const { user: newUser, token: authToken } = await registerUser(userData);
-      setUser(newUser);
+      const typedUser: User = newUser as User;
+      setUser(typedUser);
       setAuthToken(authToken);
       setAuthError(null);
     } catch (error: any) {
@@ -105,8 +110,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const contextValue: AuthContextType = {
     user,
-    isLoggedIn: !!user,
-    isAuthenticated: !!user, // 添加别名属性，与isLoggedIn保持一致
+    isAuthenticated: !!user,
+    isLoggedIn: !!user, // 添加别名属性，与isAuthenticated保持一致
     isAdmin: !!user && user.role === 'admin',
     loading,
     login,

@@ -34,8 +34,8 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 
     try {
         // 检查注册是否开放
-        const allowRegister = await getSetting('allow_register');
-        if (allowRegister === 'false') {
+        const registrationAllowed = await getSetting('allow_register');
+        if (registrationAllowed !== 'true') {
             return res.status(403).json({ message: '管理员已关闭注册功能' });
         }
         
