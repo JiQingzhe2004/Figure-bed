@@ -9,7 +9,7 @@ interface ImageViewerProps {
 
 const ImageViewer: React.FC<ImageViewerProps> = ({ image, onDownload }) => {
   return (
-    <div className="p-6 bg-gray-100 dark:bg-gray-800 flex justify-center relative">
+    <div className="p-6 bg-gray-100 dark:bg-gray-600 flex justify-center relative">
       <div className="overflow-hidden rounded-lg shadow-md bg-white dark:bg-gray-700 p-2">
         <img 
           src={fixImageUrl(image.thumbnail_url || image.url)}
