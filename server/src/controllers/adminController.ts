@@ -4,7 +4,7 @@ import { RowDataPacket } from 'mysql2';
 import path from 'path';
 import fs from 'fs';
 import { updateUserRole as updateUserRoleModel, findUserById } from '../models/User';
-import { countImages, getAllImages as getAllImagesModel, getImageById, deleteImage, deleteImages, deleteMultipleImages } from '../models/Image';
+import { countImages, getAllImages as getAllImagesModel, getImageById, deleteImage, deleteMultipleImages } from '../models/Image';
 
 // 获取所有用户
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
@@ -33,7 +33,7 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('获取用户失败:', error);
         next(error);
     }
@@ -58,7 +58,7 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
         
         res.json({ user: userInfo });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('获取用户失败:', error);
         next(error);
     }
@@ -90,7 +90,7 @@ export const updateUserRole = async (req: Request, res: Response, next: NextFunc
         
         res.json({ message: '用户角色更新成功' });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('更新用户角色失败:', error);
         next(error);
     }
@@ -143,14 +143,14 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
             
             res.json({ message: '用户已删除' });
 
-        } catch (error) {
+        } catch (error: any) {
             await connection.rollback();
             throw error;
         } finally {
             connection.release();
         }
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('删除用户失败:', error);
         next(error);
     }
@@ -203,7 +203,7 @@ export const getDashboardStats = async (req: Request, res: Response, next: NextF
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('获取统计数据失败:', error);
         next(error);
     }
@@ -239,7 +239,7 @@ export const getAllImages = async (req: Request, res: Response, next: NextFuncti
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('获取图片失败:', error);
         next(error);
     }
@@ -275,14 +275,14 @@ export const deleteImageAdmin = async (req: Request, res: Response, next: NextFu
         
         res.json({ message: '图片已删除' });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('删除图片失败:', error);
         next(error);
     }
 };
 
 // 批量删除图片
-export const deleteImages = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteImagesAdmin = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { imageIds } = req.body;
         
@@ -333,7 +333,7 @@ export const deleteImages = async (req: Request, res: Response, next: NextFuncti
             deletedFiles: deletedFiles
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('批量删除图片失败:', error);
         res.status(500).json({ message: '批量删除图片失败', error: error.message });
     }

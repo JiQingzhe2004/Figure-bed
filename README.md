@@ -95,6 +95,7 @@ npm run build # 或者 yarn build
 ```
 
 构建完成后，生成的文件位于 `server/dist` 目录。可以将其部署到任何支持 Node.js 的服务器。
+然后将package.json文件上传至dist文件夹所在的根目录，然后安装依赖。
 
 #### 后端部署后运行命令
 
@@ -104,6 +105,7 @@ npm run build # 或者 yarn build
 cd server
 node dist/server.js
 ```
+启动时报错，请将报错内容提供给AI，他会帮你解决。
 
 ##### 使用 PM2 进程管理器（推荐）
 

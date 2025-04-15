@@ -12,7 +12,6 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   charset: 'utf8mb4', // 确保使用utf8mb4字符集
-  collation: 'utf8mb4_unicode_ci' // 使用utf8mb4_unicode_ci排序规则
 });
 
 export default pool;

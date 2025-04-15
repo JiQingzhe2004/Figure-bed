@@ -94,7 +94,7 @@ const AdminImages: React.FC = () => {
                 if (!img.dataset.retried) {
                   img.dataset.retried = "true";
                   img.onerror = null;
-                  img.src = '/images/placeholder.png';
+                  img.src = '/uploads/placeholder.png';
                 }
               }}
             />
@@ -195,7 +195,7 @@ const AdminImages: React.FC = () => {
                         onError={(e) => {
                           const img = e.target as HTMLImageElement;
                           img.onerror = null;
-                          img.src = '/images/placeholder.png';
+                          img.src = '/uploads/placeholder.png';
                         }}
                       />
                     </div>
@@ -315,7 +315,7 @@ const AdminImages: React.FC = () => {
                   if (!img.dataset.retried) {
                     img.dataset.retried = "true";
                     img.onerror = null;
-                    img.src = '/images/placeholder.png';
+                    img.src = '/uploads/placeholder.png';
                   }
                 }}
               />

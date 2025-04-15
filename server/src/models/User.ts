@@ -31,6 +31,7 @@ export const findUserByEmail = async (email: string): Promise<User | null> => {
             avatar_path: userRow.avatar_path,
             created_at: userRow.created_at,
             last_login: userRow.last_login,
+            constructor: { name: "RowDataPacket" }
         };
     }
     return null;
@@ -58,7 +59,17 @@ export const findUserByUsername = async (username: string): Promise<User | null>
     }
     
     // 直接返回数据库行，确保所有字段都被传递
-    return userRow as User;
+    return {
+        id: userRow.id,
+        username: userRow.username,
+        email: userRow.email,
+        password: userRow.password,
+        role: userRow.role,
+        avatar_path: userRow.avatar_path,
+        created_at: userRow.created_at,
+        last_login: userRow.last_login,
+        constructor: { name: "RowDataPacket" }
+    };
 };
 
 // Function to create a new user
@@ -88,6 +99,7 @@ export const findUserById = async (id: number): Promise<User | null> => {
             avatar_path: userRow.avatar_path,
             created_at: userRow.created_at,
             last_login: userRow.last_login,
+            constructor: { name: "RowDataPacket" }
         };
     }
     return null;

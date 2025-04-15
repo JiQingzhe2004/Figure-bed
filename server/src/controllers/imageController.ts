@@ -155,7 +155,7 @@ export const uploadImage = async (req: Request, res: Response, next: NextFunctio
                     thumbnail_url: thumbnailUrl
                 }
             });
-        } catch (dbError) {
+        } catch (dbError: any) {
             console.error('保存图片数据到数据库失败:', dbError);
             // 如果数据库错误，删除已上传的文件
             fs.unlinkSync(req.file.path);

@@ -8,8 +8,7 @@ declare global {
       user?: {
         userId: number;
         username: string;
-        email: string;
-        role: string;
+        role?: string;
       };
     }
   }
@@ -39,9 +38,9 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     
     // 调试信息，记录解码后的用户信息
     console.log('已验证用户身份:', {
-      userId: req.user.userId,
-      username: req.user.username,
-      role: req.user.role
+      userId: req.user!.userId,
+      username: req.user!.username,
+      role: req.user!.role
     });
     
     next(); // 继续下一个中间件或路由处理器

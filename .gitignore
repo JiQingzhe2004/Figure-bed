@@ -35,3 +35,6 @@ server/uploads/
 # Frontend build output
 client/build/
 client/dist/
+client/build.zip
+server/src/middleware/auth.ts
+server/dist.zip

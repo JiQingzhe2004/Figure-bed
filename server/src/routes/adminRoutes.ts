@@ -1,6 +1,6 @@
 import express from 'express';
 import { getAllUsers, getUserById, updateUserRole, deleteUser, getDashboardStats, 
-         getAllImages, deleteImageAdmin, deleteImages } from '../controllers/adminController';
+         getAllImages, deleteImageAdmin, deleteImagesAdmin } from '../controllers/adminController';
 import { authenticateToken, isAdmin } from '../middleware/authMiddleware';
 
 const router = express.Router();
@@ -22,6 +22,6 @@ router.get('/images', getAllImages);
 router.delete('/images/:id', deleteImageAdmin);
 
 // 批量删除图片
-router.delete('/images', authenticateToken, isAdmin, deleteImages);
+router.delete('/images', authenticateToken, isAdmin, deleteImagesAdmin);
 
 export default router;
