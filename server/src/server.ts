@@ -43,6 +43,15 @@ if (!fs.existsSync(uploadPath)) {
 // 设置静态文件服务
 app.use('/uploads', express.static(uploadPath));
 
+// 添加客户端构建文件的静态服务
+const clientBuildPath = path.resolve(__dirname, '../../client/build');
+if (fs.existsSync(clientBuildPath)) {
+  console.log('提供静态文件目录:', clientBuildPath);
+  app.use(express.static(clientBuildPath));
+} else {
+  console.log('警告: 客户端构建目录不存在:', clientBuildPath);
+}
+
 // 请求日志中间件
 app.use((req: Request, _res: Response, next: NextFunction) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
@@ -62,6 +71,23 @@ app.use('/api/settings', settingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes); // 添加用户路由
 app.use('/api/stats', statsRoutes); // 添加统计路由
+
+// 配置前端路由支持 - 添加此代码
+// 在API路由之后，错误处理之前，添加catch-all路由
+// 这将处理所有非API和非静态文件的请求
+app.get('*', (req: Request, res: Response) => {
+  // 忽略API请求和静态资源请求
+  if (
+    req.url.startsWith('/api/') || 
+    req.url.startsWith('/uploads/') || 
+    req.url.includes('.')
+  ) {
+    return res.status(404).send('Not found');
+  }
+  
+  // 将所有其他请求都重定向到前端应用的index.html
+  res.sendFile(path.resolve(__dirname, '../../client/build/index.html'));
+});
 
 // 全局错误处理中间件
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
@@ -86,10 +112,9 @@ app.listen(PORT, '0.0.0.0', async () => {
     process.env.REMOTE_SERVER_URL = `http://${localIPs[0]}:${PORT}`;
     console.log(`已自动设置REMOTE_SERVER_URL为: ${process.env.REMOTE_SERVER_URL}`);
   }
-  
-  // 数据库初始化，已经包含了升级逻辑
+
+  // 数据库初始化
   try {
-    // 直接初始化数据库，其中已包含升级逻辑
     await initDatabase();
     console.log('数据库初始化完成');
   } catch (err) {
