@@ -16,3 +16,54 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* 彩带动画 */
+@keyframes confetti-fall {
+  0% { 
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.8;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% { 
+    transform: translateY(600px) translateX(var(--tx, 100px));
+    opacity: 0;
+  }
+}
+
+.animate-confetti {
+  --tx: 100px;
+  opacity: 0;
+}
+
+.animate-confetti:nth-child(even) {
+  --tx: -80px;
+}
+
+.animate-confetti:nth-child(3n) {
+  --tx: 60px;
+}
+
+.animate-confetti:nth-child(3n+1) {
+  --tx: -50px;
+}
+
+/* 惊喜文字动画 */
+@keyframes surprise-in {
+  0% { 
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-surprise-in {
+  animation: surprise-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
