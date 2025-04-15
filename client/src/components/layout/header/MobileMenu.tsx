@@ -1,8 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import UserAvatar from './UserAvatar';
 import ThemeSwitcher from '../../ui/ThemeSwitcher';
-
 interface MobileMenuProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
