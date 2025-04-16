@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ThemeSwitcher from '../../ui/ThemeSwitcher';
+
 interface MobileMenuProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
@@ -23,15 +24,20 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   // 保存原始滚动位置
   const scrollPositionRef = useRef(0);
   
-  // 添加立即关闭菜单的函数，确保状态更新迅速
-  const handleClose = React.useCallback(() => {
-    // 使用requestAnimationFrame确保更平滑的状态转换
-    requestAnimationFrame(() => {
-      setIsOpen(false);
-    });
-  }, [setIsOpen]);
+  // 处理页面导航 - 关闭菜单并滚动到顶部
+  const handleNavigate = () => {
+    setIsOpen(false);
+    // 导航到新页面时滚动到顶部 (使用setTimeout确保在路由变化后执行)
+    setTimeout(() => window.scrollTo(0, 0), 50);
+  };
   
-  // 改进的滚动锁定实现
+  // 处理手动关闭菜单 - 关闭菜单并恢复滚动位置
+  const handleCloseMenu = () => {
+    setIsOpen(false);
+    // 不做额外处理，依赖useEffect中的恢复逻辑
+  };
+  
+  // 滚动锁定和恢复
   useEffect(() => {
     if (isOpen) {
       // 保存当前滚动位置
@@ -41,20 +47,20 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollPositionRef.current}px`;
       document.body.style.width = '100%';
-      document.body.style.overflowY = 'scroll'; // 保持滚动条宽度一致，避免页面跳动
+      document.body.style.overflowY = 'scroll'; // 保持滚动条宽度一致
     } else {
-      // 恢复滚动
+      // 恢复滚动状态
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.width = '';
       document.body.style.overflowY = '';
       
-      // 恢复原始滚动位置
+      // 关键：恢复到原来的滚动位置
       window.scrollTo(0, scrollPositionRef.current);
     }
     
     return () => {
-      // 清理函数
+      // 组件卸载时恢复滚动
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.width = '';
@@ -64,21 +70,21 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
 
   return (
     <>
-      {/* 全屏遮罩层 - 优化定位和层级，使用handleClose确保迅速响应 */}
+      {/* 全屏遮罩层 */}
       {isOpen && (
         <div 
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60]" 
-          onClick={handleClose}
+          onClick={handleCloseMenu}
           style={{ 
             position: 'fixed', 
             top: 0,
             right: 0,
             bottom: 0,
             left: 0,
-            width: '100vw',      // 确保覆盖整个视口宽度
-            height: '100vh',     // 确保覆盖整个视口高度
-            touchAction: 'none', // 防止触摸事件穿透
-            willChange: 'opacity' // 优化性能
+            width: '100vw',
+            height: '100vh',
+            touchAction: 'none',
+            willChange: 'opacity'
           }}
         />
       )}
@@ -91,12 +97,14 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         style={{ 
           height: '100vh', 
           maxHeight: '-webkit-fill-available',
-          willChange: 'transform' // 优化变换性能
+          willChange: 'transform'
         }}
       >
+        {/* 注意：移除内部的关闭按钮，依赖Header组件中的按钮 */}
+
         {/* 内部容器，解决iOS Safari问题 */}
         <div className="flex flex-col h-full overflow-hidden">
-          {/* 恢复几何装饰元素 */}
+          {/* 装饰元素 */}
           <MobileMenuDecoration />
           
           <div className="relative z-10 p-6 border-b border-gray-200 dark:border-gray-700 overflow-hidden flex-shrink-0">
@@ -104,8 +112,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
               isAuthenticated={isAuthenticated}
               user={user}
               siteName={siteName}
-              setIsOpen={setIsOpen}
-              handleClose={handleClose} // 传递 handleClose 函数
+              onNavigate={handleNavigate}
             />
           </div>
 
@@ -126,7 +133,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                 label="首页" 
                 icon="home" 
                 color="blue" 
-                onClick={handleClose} 
+                onClick={handleNavigate} 
               />
               
               {isAuthenticated ? (
@@ -136,7 +143,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                     label="上传图片" 
                     icon="upload" 
                     color="purple" 
-                    onClick={handleClose} 
+                    onClick={handleNavigate} 
                   />
                   
                   <MobileNavLink 
@@ -144,7 +151,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                     label="我的图片" 
                     icon="gallery" 
                     color="green" 
-                    onClick={handleClose} 
+                    onClick={handleNavigate} 
                   />
                   
                   <MobileNavLink 
@@ -152,7 +159,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                     label="个人信息" 
                     icon="profile" 
                     color="yellow" 
-                    onClick={handleClose} 
+                    onClick={handleNavigate} 
                   />
                   
                   {isAdmin && (
@@ -161,7 +168,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                       label="管理后台" 
                       icon="admin" 
                       color="red" 
-                      onClick={handleClose} 
+                      onClick={handleNavigate} 
                     />
                   )}
                 </>
@@ -181,7 +188,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                     label="浏览公开图片" 
                     icon="browse" 
                     color="teal" 
-                    onClick={handleClose} 
+                    onClick={handleNavigate} 
                   />
                 </>
               )}
@@ -195,6 +202,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
               onLogout={onLogout} 
               setIsOpen={setIsOpen}
               siteName={siteName} 
+              onNavigate={handleNavigate}
             />
           </div>
         </div>
@@ -203,7 +211,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   );
 };
 
-// 恢复几何装饰元素组件
+// 装饰元素组件
 const MobileMenuDecoration = () => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
     <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 opacity-20"></div>
@@ -225,25 +233,23 @@ const MobileMenuDecoration = () => (
   </div>
 );
 
-// 更新 MobileMenuHeader 的接口，增加 handleClose 属性
+// 更新 MobileMenuHeader 接口
 interface MobileMenuHeaderProps {
   isAuthenticated: boolean;
   user: any;
   siteName: string;
-  setIsOpen: (isOpen: boolean) => void;
-  handleClose: () => void; // 添加 handleClose 属性
+  onNavigate: () => void;
 }
 
 const MobileMenuHeader: React.FC<MobileMenuHeaderProps> = ({ 
   isAuthenticated, 
   user, 
-  siteName, 
-  setIsOpen,
-  handleClose 
+  siteName,
+  onNavigate
 }) => {
   return (
     <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-blue-600/70 via-indigo-600/70 to-purple-600/70">
-      {/* 添加装饰性几何元素 */}
+      {/* 装饰性几何元素 */}
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-white opacity-10 rounded-full blur-xl"></div>
       <div className="absolute bottom-0 left-0 w-48 h-20 bg-blue-400 opacity-10 transform rotate-12 blur-lg"></div>
       <div className="absolute top-0 right-1/4 w-2 h-12 bg-white opacity-20 rounded-full"></div>
@@ -251,7 +257,7 @@ const MobileMenuHeader: React.FC<MobileMenuHeaderProps> = ({
       <div className="absolute top-8 left-4 w-3 h-3 bg-blue-300 opacity-20 rounded-full"></div>
       <div className="absolute bottom-12 left-1/4 w-6 h-6 bg-indigo-300 opacity-15 rounded-md transform rotate-45"></div>
       
-      {/* 移除额外的模糊层，保留轻微的白色叠加效果 */}
+      {/* 白色叠加效果 */}
       <div className="absolute inset-0 bg-white/5"></div>
       
       <div className="relative px-6 py-6 z-10">
@@ -287,14 +293,14 @@ const MobileMenuHeader: React.FC<MobileMenuHeaderProps> = ({
               <Link 
                 to="/login" 
                 className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-lg text-white transition-colors duration-200"
-                onClick={handleClose}
+                onClick={onNavigate}
               >
                 登录
               </Link>
               <Link 
                 to="/register" 
                 className="bg-white text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-lg font-medium transition-colors duration-200"
-                onClick={handleClose}
+                onClick={onNavigate}
               >
                 注册
               </Link>
@@ -428,17 +434,7 @@ const MobileNavLink: React.FC<MobileNavLinkProps> = ({ to, label, icon, color, o
     <Link 
       to={to} 
       className={`flex items-center py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 ${getHoverClass()} transition-colors group`}
-      onClick={(e) => {
-        // 确保点击事件立即处理
-        if (onClick) onClick();
-        // 添加微小延迟以确保导航后再关闭菜单
-        setTimeout(() => {
-          document.body.style.position = '';
-          document.body.style.top = '';
-          document.body.style.width = '';
-          document.body.style.overflowY = '';
-        }, 50);
-      }}
+      onClick={onClick}
     >
       {getIcon()}
       <span>{label}</span>
@@ -451,18 +447,28 @@ interface MobileMenuFooterProps {
   onLogout: () => void;
   setIsOpen: (isOpen: boolean) => void;
   siteName: string;
+  onNavigate: () => void;
 }
 
-const MobileMenuFooter: React.FC<MobileMenuFooterProps> = ({ isAuthenticated, onLogout, setIsOpen, siteName }) => {
+const MobileMenuFooter: React.FC<MobileMenuFooterProps> = ({ 
+  isAuthenticated, 
+  onLogout, 
+  setIsOpen, 
+  siteName, 
+  onNavigate 
+}) => {
+  // 处理登出
+  const handleLogout = () => {
+    onLogout();
+    setIsOpen(false);
+  };
+
   return (
     <div className="relative z-10 border-t border-gray-200 dark:border-gray-700 p-6 bg-gradient-to-b from-transparent via-gray-50 to-gray-100 dark:from-transparent dark:via-gray-800 dark:to-gray-800 sticky bottom-0">
       {isAuthenticated && (
         <button
           className="w-full flex items-center py-2 px-4 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-          onClick={() => {
-            onLogout();
-            setIsOpen(false);
-          }}
+          onClick={handleLogout}
         >
           <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -483,11 +489,19 @@ const MobileMenuFooter: React.FC<MobileMenuFooterProps> = ({ isAuthenticated, on
           © {new Date().getFullYear()} {siteName} 
         </div>
         <div className="flex justify-center space-x-4 mt-2">
-          <Link to="/privacy-policy" className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors">
+          <Link
+            to="/privacy-policy"
+            className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+            onClick={onNavigate}
+          >
             隐私政策
           </Link>
           <span className="text-gray-300 dark:text-gray-600">|</span>
-          <Link to="/terms-of-service" className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors">
+          <Link
+            to="/terms-of-service"
+            className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+            onClick={onNavigate}
+          >
             使用条款
           </Link>
         </div>

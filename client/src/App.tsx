@@ -6,6 +6,7 @@ import { getSettings } from './services/settingService';
 import DynamicTitle from './components/common/DynamicTitle';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
+import { useLocation } from 'react-router-dom';
 
 function App() {
   const [siteMetadata, setSiteMetadata] = useState({
@@ -14,6 +15,8 @@ function App() {
     keywords: '图片,上传,图床,照片,分享'
   });
   
+  const location = useLocation();
+
   useEffect(() => {
     const fetchSiteMetadata = async () => {
       try {
@@ -30,6 +33,11 @@ function App() {
     
     fetchSiteMetadata();
   }, []);
+
+  // 路由变化时自动滚动到顶部
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
   
   return (
     <>
