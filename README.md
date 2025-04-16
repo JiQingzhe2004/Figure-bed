@@ -87,6 +87,13 @@ npm run build # 或者 yarn build
 
 构建完成后，生成的文件位于 `client/build` 目录。可以将其部署到任何静态文件服务器，例如 Nginx 或 Vercel。
 
+nginx请配置以下字段,这样才不会进入404界面
+```nginx
+location / {
+  try_files $uri $uri/ /index.html;
+}
+```
+
 #### 后端 (server)
 
 ```bash
