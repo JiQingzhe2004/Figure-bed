@@ -58,11 +58,15 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className={`relative z-40 transition-all duration-300 ${scrolled ? 'shadow-md bg-white dark:bg-gray-800' : 'bg-white/95 dark:bg-gray-800/95'}`}>
+    <header className={`fixed top-0 left-0 right-0 w-full z-40 transition-all duration-300 ${
+      scrolled 
+      ? 'shadow-md bg-white/85 dark:bg-gray-800/90 backdrop-blur-md' 
+      : 'bg-white/95 dark:bg-gray-800/95'
+    }`}>
       <DecorativeBackground />
       
       <div className="w-full px-4 md:px-6 lg:container lg:mx-auto relative">
-        <div className="flex justify-between items-center py-3 md:py-4">
+        <div className="flex justify-between items-center py-5 md:py-4">
           <div className="flex items-center">
             <Logo siteName={siteName} siteLogo={siteLogo} />
           </div>
@@ -110,7 +114,7 @@ const Header: React.FC = () => {
           
           {/* 移动端菜单按钮 - 提高z-index使其始终可见 */}
           <button 
-            className="md:hidden fixed top-3 right-4 z-[60] text-gray-600 dark:text-gray-200 focus:outline-none"
+            className="md:hidden fixed top-5 right-4 z-[60] text-gray-600 dark:text-gray-200 focus:outline-none"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             <div className="w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-gray-700 shadow-md border border-gray-200 dark:border-gray-600">
