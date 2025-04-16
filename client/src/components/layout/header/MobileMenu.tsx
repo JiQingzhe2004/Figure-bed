@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ThemeSwitcher from '../../ui/ThemeSwitcher';
 interface MobileMenuProps {
@@ -20,125 +20,186 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   isAuthenticated, 
   onLogout 
 }) => {
-  return (
-    <div className={`fixed inset-0 z-50 md:hidden transition-all duration-500 ease-in-out ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-      {/* 背景蒙层 */}
-      <div 
-        className={`fixed inset-0 transition-all duration-500 ease-in-out ${
-          isOpen 
-            ? 'bg-black/60 backdrop-blur-sm' 
-            : 'bg-black/0 backdrop-blur-none pointer-events-none'
-        }`}
-        onClick={() => setIsOpen(false)}
-      ></div>
+  // 保存原始滚动位置
+  const scrollPositionRef = useRef(0);
+  
+  // 添加立即关闭菜单的函数，确保状态更新迅速
+  const handleClose = React.useCallback(() => {
+    // 使用requestAnimationFrame确保更平滑的状态转换
+    requestAnimationFrame(() => {
+      setIsOpen(false);
+    });
+  }, [setIsOpen]);
+  
+  // 改进的滚动锁定实现
+  useEffect(() => {
+    if (isOpen) {
+      // 保存当前滚动位置
+      scrollPositionRef.current = window.pageYOffset;
       
-      {/* 菜单内容 - 减小宽度 */}
+      // 锁定滚动并固定位置
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollPositionRef.current}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflowY = 'scroll'; // 保持滚动条宽度一致，避免页面跳动
+    } else {
+      // 恢复滚动
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflowY = '';
+      
+      // 恢复原始滚动位置
+      window.scrollTo(0, scrollPositionRef.current);
+    }
+    
+    return () => {
+      // 清理函数
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflowY = '';
+    };
+  }, [isOpen]);
+
+  return (
+    <>
+      {/* 全屏遮罩层 - 优化定位和层级，使用handleClose确保迅速响应 */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60]" 
+          onClick={handleClose}
+          style={{ 
+            position: 'fixed', 
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+            width: '100vw',      // 确保覆盖整个视口宽度
+            height: '100vh',     // 确保覆盖整个视口高度
+            touchAction: 'none', // 防止触摸事件穿透
+            willChange: 'opacity' // 优化性能
+          }}
+        />
+      )}
+      
+      {/* 菜单容器 */}
       <div 
-        className={`fixed right-0 top-0 bottom-0 w-[75%] max-w-xs bg-white dark:bg-gray-800 shadow-xl overflow-hidden transform transition-transform duration-500 ease-out rounded-l-2xl ${
+        className={`fixed right-0 top-0 bottom-0 w-[75%] max-w-xs bg-white dark:bg-gray-800 shadow-xl overflow-hidden transform transition-all duration-300 ease-in-out rounded-l-2xl z-[65] ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         } flex flex-col`}
-        style={{ maxHeight: '100%' }}
+        style={{ 
+          height: '100vh', 
+          maxHeight: '-webkit-fill-available',
+          willChange: 'transform' // 优化变换性能
+        }}
       >
-        {/* 恢复几何装饰元素 */}
-        <MobileMenuDecoration />
-        
-        <div className="relative z-10 p-6 border-b border-gray-200 dark:border-gray-700 overflow-hidden">
-          <MobileMenuHeader 
-            isAuthenticated={isAuthenticated}
-            user={user}
-            siteName={siteName}
-            setIsOpen={setIsOpen}
-          />
-        </div>
-
-        <div className="relative z-10 flex items-center px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-medium text-gray-800 dark:text-white flex items-center">
-            <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-            </svg>
-            菜单导航
-          </h3>
-        </div>
-        
-        {/* 主菜单内容区 */}
-        <div className="relative z-10 flex-1 overflow-y-auto overscroll-contain">
-          <nav className="p-6 space-y-1">
-            <MobileNavLink 
-              to="/" 
-              label="首页" 
-              icon="home" 
-              color="blue" 
-              onClick={() => setIsOpen(false)} 
+        {/* 内部容器，解决iOS Safari问题 */}
+        <div className="flex flex-col h-full overflow-hidden">
+          {/* 恢复几何装饰元素 */}
+          <MobileMenuDecoration />
+          
+          <div className="relative z-10 p-6 border-b border-gray-200 dark:border-gray-700 overflow-hidden flex-shrink-0">
+            <MobileMenuHeader 
+              isAuthenticated={isAuthenticated}
+              user={user}
+              siteName={siteName}
+              setIsOpen={setIsOpen}
+              handleClose={handleClose} // 传递 handleClose 函数
             />
-            
-            {isAuthenticated ? (
-              <>
-                <MobileNavLink 
-                  to="/upload" 
-                  label="上传图片" 
-                  icon="upload" 
-                  color="purple" 
-                  onClick={() => setIsOpen(false)} 
-                />
-                
-                <MobileNavLink 
-                  to="/user/images" 
-                  label="我的图片" 
-                  icon="gallery" 
-                  color="green" 
-                  onClick={() => setIsOpen(false)} 
-                />
-                
-                <MobileNavLink 
-                  to="/user/profile" 
-                  label="个人信息" 
-                  icon="profile" 
-                  color="yellow" 
-                  onClick={() => setIsOpen(false)} 
-                />
-                
-                {isAdmin && (
+          </div>
+
+          <div className="relative z-10 flex items-center px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <h3 className="text-lg font-medium text-gray-800 dark:text-white flex items-center">
+              <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+              </svg>
+              菜单导航
+            </h3>
+          </div>
+          
+          {/* 主菜单内容区 */}
+          <div className="relative z-10 flex-1 overflow-y-auto overscroll-contain">
+            <nav className="p-6 space-y-1">
+              <MobileNavLink 
+                to="/" 
+                label="首页" 
+                icon="home" 
+                color="blue" 
+                onClick={handleClose} 
+              />
+              
+              {isAuthenticated ? (
+                <>
                   <MobileNavLink 
-                    to="/admin/dashboard" 
-                    label="管理后台" 
-                    icon="admin" 
-                    color="red" 
-                    onClick={() => setIsOpen(false)} 
+                    to="/upload" 
+                    label="上传图片" 
+                    icon="upload" 
+                    color="purple" 
+                    onClick={handleClose} 
                   />
-                )}
-              </>
-            ) : (
-              <>
-                <div className="border-b border-dashed border-gray-200 dark:border-gray-700 my-2"></div>
-                
-                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 px-4 py-2">
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  探索功能
-                </div>
-                
-                <MobileNavLink 
-                  to="/public-images" 
-                  label="浏览公开图片" 
-                  icon="browse" 
-                  color="teal" 
-                  onClick={() => setIsOpen(false)} 
-                />
-              </>
-            )}
-          </nav>
+                  
+                  <MobileNavLink 
+                    to="/user/images" 
+                    label="我的图片" 
+                    icon="gallery" 
+                    color="green" 
+                    onClick={handleClose} 
+                  />
+                  
+                  <MobileNavLink 
+                    to="/user/profile" 
+                    label="个人信息" 
+                    icon="profile" 
+                    color="yellow" 
+                    onClick={handleClose} 
+                  />
+                  
+                  {isAdmin && (
+                    <MobileNavLink 
+                      to="/admin/dashboard" 
+                      label="管理后台" 
+                      icon="admin" 
+                      color="red" 
+                      onClick={handleClose} 
+                    />
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="border-b border-dashed border-gray-200 dark:border-gray-700 my-2"></div>
+                  
+                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 px-4 py-2">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    探索功能
+                  </div>
+                  
+                  <MobileNavLink 
+                    to="/public-images" 
+                    label="浏览公开图片" 
+                    icon="browse" 
+                    color="teal" 
+                    onClick={handleClose} 
+                  />
+                </>
+              )}
+            </nav>
+          </div>
+          
+          {/* 底部区域 */}
+          <div className="relative z-10 border-t border-gray-200 dark:border-gray-700 p-6 bg-gradient-to-b from-transparent via-gray-50 to-gray-100 dark:from-transparent dark:via-gray-800 dark:to-gray-800 flex-shrink-0">
+            <MobileMenuFooter 
+              isAuthenticated={isAuthenticated} 
+              onLogout={onLogout} 
+              setIsOpen={setIsOpen}
+              siteName={siteName} 
+            />
+          </div>
         </div>
-        
-        {/* 底部区域 */}
-        <MobileMenuFooter 
-          isAuthenticated={isAuthenticated} 
-          onLogout={onLogout} 
-          setIsOpen={setIsOpen}
-          siteName={siteName} 
-        />
       </div>
-    </div>
+    </>
   );
 };
 
@@ -164,14 +225,22 @@ const MobileMenuDecoration = () => (
   </div>
 );
 
+// 更新 MobileMenuHeader 的接口，增加 handleClose 属性
 interface MobileMenuHeaderProps {
   isAuthenticated: boolean;
   user: any;
   siteName: string;
   setIsOpen: (isOpen: boolean) => void;
+  handleClose: () => void; // 添加 handleClose 属性
 }
 
-const MobileMenuHeader: React.FC<MobileMenuHeaderProps> = ({ isAuthenticated, user, siteName, setIsOpen }) => {
+const MobileMenuHeader: React.FC<MobileMenuHeaderProps> = ({ 
+  isAuthenticated, 
+  user, 
+  siteName, 
+  setIsOpen,
+  handleClose 
+}) => {
   return (
     <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-blue-600/70 via-indigo-600/70 to-purple-600/70">
       {/* 添加装饰性几何元素 */}
@@ -218,14 +287,14 @@ const MobileMenuHeader: React.FC<MobileMenuHeaderProps> = ({ isAuthenticated, us
               <Link 
                 to="/login" 
                 className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-lg text-white transition-colors duration-200"
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
               >
                 登录
               </Link>
               <Link 
                 to="/register" 
                 className="bg-white text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-lg font-medium transition-colors duration-200"
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
               >
                 注册
               </Link>
@@ -359,7 +428,17 @@ const MobileNavLink: React.FC<MobileNavLinkProps> = ({ to, label, icon, color, o
     <Link 
       to={to} 
       className={`flex items-center py-3 px-4 rounded-md text-gray-700 dark:text-gray-200 ${getHoverClass()} transition-colors group`}
-      onClick={onClick}
+      onClick={(e) => {
+        // 确保点击事件立即处理
+        if (onClick) onClick();
+        // 添加微小延迟以确保导航后再关闭菜单
+        setTimeout(() => {
+          document.body.style.position = '';
+          document.body.style.top = '';
+          document.body.style.width = '';
+          document.body.style.overflowY = '';
+        }, 50);
+      }}
     >
       {getIcon()}
       <span>{label}</span>

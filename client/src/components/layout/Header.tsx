@@ -112,9 +112,9 @@ const Header: React.FC = () => {
             </div>
           </nav>
           
-          {/* 移动端菜单按钮 - 提高z-index使其始终可见 */}
+          {/* 移动端菜单按钮 - 提高z-index使其在菜单打开时仍然可见 */}
           <button 
-            className="md:hidden fixed top-5 right-4 z-[60] text-gray-600 dark:text-gray-200 focus:outline-none"
+            className="md:hidden fixed top-5 right-4 z-[80] text-gray-600 dark:text-gray-200 focus:outline-none"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             <div className="w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-gray-700 shadow-md border border-gray-200 dark:border-gray-600">
