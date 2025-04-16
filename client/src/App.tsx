@@ -48,8 +48,7 @@ function App() {
       />
       <ThemeProvider>
         <AuthProvider>
-          <AppRoutes>
-          </AppRoutes>
+          <AppRoutes />
         </AuthProvider>
       </ThemeProvider>
     </>
