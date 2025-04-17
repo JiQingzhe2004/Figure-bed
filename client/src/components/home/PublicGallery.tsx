@@ -11,54 +11,68 @@ interface PublicGalleryProps {
   hasMore: boolean;
   page: number;
   loadMore: () => void;
+  fetchImagesInRange?: (startIndex: number, endIndex: number) => Promise<ImageData[]>;
 }
 
-// 为LazyLoadedImage组件定义props类型接口
 interface LazyLoadedImageProps {
   image: ImageData;
   onIntersect: () => void;
+  priority?: boolean;
 }
 
-// 图片懒加载组件
-const LazyLoadedImage: React.FC<LazyLoadedImageProps> = ({ image, onIntersect }) => {
-  const [isVisible, setIsVisible] = useState(false);
+// 简化的懒加载图片组件
+const LazyLoadedImage: React.FC<LazyLoadedImageProps> = ({ image, onIntersect, priority = false }) => {
+  const [isVisible, setIsVisible] = useState(priority); // 如果是优先级项，立即显示
+  const [isLoaded, setIsLoaded] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // 如果是优先项，直接加载
+    if (priority && !isLoaded) {
+      setIsLoaded(true);
+      onIntersect();
+      return;
+    }
+
+    // 创建观察器
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          // 延迟100ms再加载图片，让用户能看到骨架屏动画
-          setTimeout(() => {
-            setIsVisible(true);
-            onIntersect && onIntersect(); // 触发回调
-            
-            // 一旦加载，取消观察
-            if (imageRef.current) {
-              observer.unobserve(imageRef.current);
-            }
-          }, 100);
+          setIsVisible(true);
+          observer.unobserve(entry.target);
         }
       },
       {
-        rootMargin: '0px', // 不提前加载，只有进入视口才加载
-        threshold: 0.5 // 当元素有50%进入视口时才触发加载
+        rootMargin: '200px', // 提前500px开始加载图片
+        threshold: 0.01
       }
     );
 
-    if (imageRef.current) {
-      observer.observe(imageRef.current);
+    const currentRef = imageRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
     }
 
     return () => {
-      if (imageRef.current) {
-        observer.unobserve(imageRef.current);
+      if (currentRef) {
+        observer.unobserve(currentRef);
       }
     };
-  }, [onIntersect]);
+  }, [priority, isLoaded, onIntersect]);
+
+  // 图片加载完成时触发
+  const handleImageLoaded = useCallback(() => {
+    if (!isLoaded) {
+      setIsLoaded(true);
+      onIntersect();
+    }
+  }, [isLoaded, onIntersect]);
 
   return (
-    <div ref={imageRef} className="mb-4 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
+    <div 
+      ref={imageRef} 
+      className="mb-4 bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300"
+    >
       <Link to={`/image/${image.id}`}>
         <div className="relative">
           {isVisible ? (
@@ -69,6 +83,7 @@ const LazyLoadedImage: React.FC<LazyLoadedImageProps> = ({ image, onIntersect })
                 alt={image.original_name}
                 className="w-full"
                 aspectRatio={image.width && image.height ? `${image.width} / ${image.height}` : undefined}
+                onLoad={handleImageLoaded}
               />
               {image.width && image.height && (
                 <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
@@ -77,19 +92,16 @@ const LazyLoadedImage: React.FC<LazyLoadedImageProps> = ({ image, onIntersect })
               )}
             </>
           ) : (
-            // 优化骨架屏显示效果
             <div 
-              className="bg-gray-200 dark:bg-gray-700 animate-pulse" 
+              className="bg-gray-200 dark:bg-gray-700 animate-pulse flex items-center justify-center" 
               style={{ 
                 aspectRatio: image.width && image.height ? `${image.width} / ${image.height}` : '16/9',
                 minHeight: '160px'
               }}
             >
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                <svg className="w-10 h-10 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
+              <svg className="w-10 h-10 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
             </div>
           )}
         </div>
@@ -112,6 +124,7 @@ const LazyLoadedImage: React.FC<LazyLoadedImageProps> = ({ image, onIntersect })
   );
 };
 
+// 主画廊组件
 const PublicGallery: React.FC<PublicGalleryProps> = ({
   images,
   loading,
@@ -120,8 +133,9 @@ const PublicGallery: React.FC<PublicGalleryProps> = ({
   page,
   loadMore
 }) => {
-  const observerRef = useRef<HTMLDivElement>(null);
   const [loadedImagesCount, setLoadedImagesCount] = useState(0);
+  const observerRef = useRef<HTMLDivElement>(null);
+  const [initialRender, setInitialRender] = useState(true);
   
   const breakpointColumnsObj = {
     default: 4,
@@ -131,20 +145,22 @@ const PublicGallery: React.FC<PublicGalleryProps> = ({
     640: 1
   };
 
-  const imageMap = new Map();
+  // 图片去重
+  const uniqueImagesMap = new Map();
   images.forEach(image => {
     if (image.id) {
-      imageMap.set(image.id, image);
+      uniqueImagesMap.set(image.id, image);
     }
   });
   
-  const dedupedImages = Array.from(imageMap.values());
+  const uniqueImages = Array.from(uniqueImagesMap.values());
   
-  const handleImageIntersect = useCallback(() => {
+  // 图片加载回调
+  const handleImageLoaded = useCallback(() => {
     setLoadedImagesCount(prev => prev + 1);
   }, []);
 
-  // 使用Intersection Observer监听滚动到底部
+  // 监听页面底部触发加载更多
   const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
     const [entry] = entries;
     if (entry.isIntersecting && hasMore && !loading) {
@@ -152,11 +168,10 @@ const PublicGallery: React.FC<PublicGalleryProps> = ({
     }
   }, [hasMore, loading, loadMore]);
 
+  // 设置底部观察器
   useEffect(() => {
-    // 创建底部观察器实例
     const observer = new IntersectionObserver(handleObserver, {
-      root: null,
-      rootMargin: '200px 0px 200px 0px',
+      rootMargin: '300px 0px',
       threshold: 0.1
     });
 
@@ -171,13 +186,27 @@ const PublicGallery: React.FC<PublicGalleryProps> = ({
     };
   }, [handleObserver]);
 
-  // 重置加载计数，当组件重新加载时
+  // 首次加载后标记初始渲染完成
   useEffect(() => {
-    setLoadedImagesCount(0);
-  }, [page === 1]);
+    if (initialRender && uniqueImages.length > 0) {
+      // 300ms后标记初始渲染完成，让布局稳定
+      const timer = setTimeout(() => {
+        setInitialRender(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [initialRender, uniqueImages.length]);
+
+  // 当页面重置时重置加载计数
+  useEffect(() => {
+    if (page === 1) {
+      setLoadedImagesCount(0);
+      setInitialRender(true);
+    }
+  }, [page]);
 
   return (
-    <div>
+    <div className="public-gallery">
       <h2 className="text-2xl font-semibold mb-6">公开图片</h2>
       <hr className="my-6" />
       {error && (
@@ -186,26 +215,26 @@ const PublicGallery: React.FC<PublicGalleryProps> = ({
         </div>
       )}
 
-      <div className="mb-4 text-sm text-gray-500">
-        已渲染 {loadedImagesCount} 张图片 • 按需加载 • 只有滚动到图片位置才会加载内容
-      </div>
-
       <Masonry
         breakpointCols={breakpointColumnsObj}
         className="flex w-auto -ml-4"
         columnClassName="pl-4 bg-clip-padding"
       >
-        {dedupedImages.map((image) => (
+        {uniqueImages.map((image, index) => (
           <LazyLoadedImage 
             key={`image-${image.id}`} 
             image={image} 
-            onIntersect={handleImageIntersect}
+            onIntersect={handleImageLoaded}
+            priority={index < 8} // 前8张图片优先加载
           />
         ))}
       </Masonry>
 
-      {/* 无限滚动的观察点元素 */}
-      <div ref={observerRef} className="h-10 w-full flex justify-center items-center mt-4">
+      {/* 加载更多触发器 */}
+      <div 
+        ref={observerRef} 
+        className="h-10 w-full flex justify-center items-center mt-4"
+      >
         {loading && (
           <div className="inline-flex items-center text-gray-500 dark:text-gray-400">
             <div className="mr-3 w-5 h-5 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
@@ -214,19 +243,19 @@ const PublicGallery: React.FC<PublicGalleryProps> = ({
         )}
       </div>
 
-      {!hasMore && dedupedImages.length > 0 && (
+      {!hasMore && uniqueImages.length > 0 && (
         <div className="text-center text-gray-500 dark:text-gray-400 mt-4 mb-8">
           <p>已经到底啦，没有更多图片了~</p>
         </div>
       )}
 
-      {loading && page === 1 && images.length === 0 && (
+      {loading && page === 1 && uniqueImages.length === 0 && (
         <div className="flex justify-center items-center h-[200px]">
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       )}
 
-      {!loading && images.length === 0 && (
+      {!loading && uniqueImages.length === 0 && (
         <div className="flex flex-col items-center justify-center h-[200px] bg-gray-50 dark:bg-gray-700 rounded-lg">
           <svg className="w-16 h-16 text-gray-400 dark:text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />

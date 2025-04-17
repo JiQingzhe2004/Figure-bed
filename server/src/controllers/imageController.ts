@@ -255,6 +255,42 @@ export const getPublicImages = async (req: Request, res: Response, next: NextFun
     }
 };
 
+// 根据范围获取公开图片
+export const getPublicImagesByRange = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const startIndex = parseInt(req.query.start as string) || 0;
+        const endIndex = parseInt(req.query.end as string) || startIndex + 12;
+        
+        // 验证参数有效性
+        if (isNaN(startIndex) || isNaN(endIndex) || startIndex < 0 || endIndex < startIndex) {
+            return res.status(400).json({ message: '无效的范围参数' });
+        }
+        
+        const limit = endIndex - startIndex;
+        
+        // 获取指定范围的公开图片
+        const images = await getPublicImagesModel(limit, startIndex);
+        
+        // 获取服务器URL
+        const serverUrl = process.env.REMOTE_SERVER_URL || `http://localhost:${process.env.PORT || 5000}`;
+        
+        // 格式化返回数据，添加完整URL和缩略图URL
+        const formattedImages = images.map(image => formatImageResponse(image, serverUrl));
+
+        res.json({
+            images: formattedImages,
+            range: {
+                start: startIndex,
+                end: endIndex,
+                count: formattedImages.length
+            }
+        });
+    } catch (error) {
+        console.error('获取公开图片范围失败:', error);
+        next(error);
+    }
+};
+
 // 获取单张图片
 export const getImageById = async (req: Request, res: Response, next: NextFunction) => {
     try {

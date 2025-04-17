@@ -129,6 +129,9 @@ router.get('/my-images', authenticateToken, imageController.getUserImages);
 // 获取公开图片
 router.get('/public', imageController.getPublicImages);
 
+// 根据范围获取公开图片 - 新增API端点
+router.get('/public-range', imageController.getPublicImagesByRange);
+
 // 获取单张图片
 router.get('/:id', imageController.getImageById);
 

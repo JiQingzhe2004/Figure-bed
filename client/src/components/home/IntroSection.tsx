@@ -7,7 +7,7 @@ interface IntroSectionProps {
   siteDescription: string;
   publicImagesCount: number;
   totalUsers: number;
-  previewImages: ImageData[];
+  previewImages?: ImageData[]; // 将预览图像属性设为可选
 }
 
 const IntroSection: React.FC<IntroSectionProps> = ({ 
@@ -98,7 +98,7 @@ const IntroSection: React.FC<IntroSectionProps> = ({
               </div>
               
               <div className="grid grid-cols-3 gap-3">
-                {previewImages.slice(0, 6).map((image, index) => (
+                {previewImages?.slice(0, 6).map((image, index) => (
                   <div 
                     key={`preview-${image.id || index}`} 
                     className="aspect-square overflow-hidden rounded-xl bg-gray-200 group hover:scale-105 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-md"

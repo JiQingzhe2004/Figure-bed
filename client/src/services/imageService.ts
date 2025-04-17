@@ -65,6 +65,16 @@ export const getPublicImages = async (page: number = 1, perPage: number = 12): P
     }
 };
 
+export const getPublicImagesByRange = async (startIndex: number, endIndex: number): Promise<{images: ImageData[]}> => {
+    try {
+        const response = await axiosInstance.get<{images: ImageData[]}>(`/api/images/public-range?start=${startIndex}&end=${endIndex}`);
+        return response.data;
+    } catch (error: any) {
+        console.error('按范围获取图片失败:', error.response?.data || error.message);
+        throw new Error(error.response?.data?.message || '获取图片失败');
+    }
+};
+
 export const getImageById = async (id: number): Promise<ImageData> => {
     try {
         const response = await axiosInstance.get<{ image: ImageData }>(`/api/images/${id}`);

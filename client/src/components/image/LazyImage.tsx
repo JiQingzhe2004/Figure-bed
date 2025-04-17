@@ -5,7 +5,8 @@ interface LazyImageProps {
   src: string;
   alt: string;
   className?: string;
-  aspectRatio?: string; // 宽高比，例如 "16 / 9"
+  aspectRatio?: string;
+  onLoad?: () => void; // 添加onLoad回调函数属性
 }
 
 const LazyImage: React.FC<LazyImageProps> = ({
@@ -14,6 +15,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
   alt,
   className = '',
   aspectRatio,
+  onLoad,
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState(false);
@@ -24,6 +26,10 @@ const LazyImage: React.FC<LazyImageProps> = ({
   // 处理图片加载完成事件
   const handleLoad = () => {
     setIsLoaded(true);
+    // 调用父组件传入的onLoad回调
+    if (onLoad) {
+      onLoad();
+    }
   };
   
   // 处理图片加载错误事件
