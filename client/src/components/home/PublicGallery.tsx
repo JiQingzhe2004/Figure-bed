@@ -136,6 +136,8 @@ const PublicGallery: React.FC<PublicGalleryProps> = ({
   const [loadedImagesCount, setLoadedImagesCount] = useState(0);
   const observerRef = useRef<HTMLDivElement>(null);
   const [initialRender, setInitialRender] = useState(true);
+  // 添加返回顶部按钮状态
+  const [showBackToTop, setShowBackToTop] = useState(false);
   
   const breakpointColumnsObj = {
     default: 4,
@@ -205,6 +207,31 @@ const PublicGallery: React.FC<PublicGalleryProps> = ({
     }
   }, [page]);
 
+  // 监听页面滚动，控制返回顶部按钮显示
+  useEffect(() => {
+    const handleScroll = () => {
+      // 当页面滚动超过500px时显示按钮
+      setShowBackToTop(window.scrollY > 500);
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    
+    // 初始检查
+    handleScroll();
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+  
+  // 返回顶部的处理函数
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
   return (
     <div className="public-gallery">
       <h2 className="text-2xl font-semibold mb-6">公开图片</h2>
@@ -263,6 +290,26 @@ const PublicGallery: React.FC<PublicGalleryProps> = ({
           <p className="text-lg text-gray-500 dark:text-gray-400">暂时没有图片，快来上传第一张吧！</p>
         </div>
       )}
+
+      {/* 返回顶部按钮 - 添加CSS过渡动画 */}
+      <div 
+        className={`fixed bottom-6 right-6 transition-all duration-500 ease-in-out transform ${
+          showBackToTop 
+            ? 'opacity-100 translate-y-0 scale-100' 
+            : 'opacity-0 translate-y-10 scale-75 pointer-events-none'
+        }`}
+        style={{zIndex: 50}}
+      >
+        <button 
+          onClick={scrollToTop}
+          className="bg-blue-500 hover:bg-blue-600 text-white rounded-full p-3 shadow-lg transition-colors duration-300"
+          aria-label="返回顶部"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+          </svg>
+        </button>
+      </div>
     </div>
   );
 };
